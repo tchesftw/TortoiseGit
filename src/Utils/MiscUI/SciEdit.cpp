@@ -81,6 +81,7 @@ CSciEdit::CSciEdit(void) : m_DirectFunction(NULL)
 	, m_nAutoCompleteMinChars(3)
 	, m_SpellingCache(2000)
 	, m_blockModifiedHandler(false)
+	, m_bReadOnly(false)
 {
 	m_hModule = ::LoadLibrary(L"SciLexer_tgit.dll");
 }
@@ -410,6 +411,10 @@ CStringA CSciEdit::StringForControl(const CString& text)
 
 void CSciEdit::SetText(const CString& sText)
 {
+	auto readonly = m_bReadOnly;
+	SCOPE_EXIT { SetReadOnly(readonly); };
+	SetReadOnly(false);
+
 	CStringA sTextA = StringForControl(sText);
 	Call(SCI_SETTEXT, 0, reinterpret_cast<LPARAM>(static_cast<LPCSTR>(sTextA)));
 
@@ -427,6 +432,10 @@ void CSciEdit::SetText(const CString& sText)
 
 void CSciEdit::InsertText(const CString& sText, bool bNewLine)
 {
+	auto readonly = m_bReadOnly;
+	SCOPE_EXIT { SetReadOnly(readonly); };
+	SetReadOnly(false);
+
 	CStringA sTextA = StringForControl(sText);
 	Call(SCI_REPLACESEL, 0, reinterpret_cast<LPARAM>(static_cast<LPCSTR>(sTextA)));
 	if (bNewLine)
@@ -611,6 +620,9 @@ BOOL CSciEdit::IsMisspelled(const CString& sWord)
 
 void CSciEdit::CheckSpelling(Sci_Position startpos, Sci_Position endpos)
 {
+	if (m_bReadOnly)
+		return;
+
 	if (!pChecker && !m_SpellChecker)
 		return;
 
@@ -1681,7 +1693,7 @@ void CSciEdit::SetUDiffStyle()
 		CUnicodeUtils::StdGetUTF8(CRegStdString(L"Software\\TortoiseGit\\UDiffFontName", L"Consolas")).c_str());
 	Call(SCI_SETTABWIDTH, CRegStdDWORD(L"Software\\TortoiseGit\\UDiffTabSize", 4));
 
-	Call(SCI_SETREADONLY, TRUE);
+	SetReadOnly(true);
 
 	//Set the default windows colors for edit controls
 	SetColors(false);
@@ -1754,6 +1766,13 @@ int CSciEdit::LoadFromFile(CString &filename)
 	if (!fp)
 		return -1;
 
+	auto readonly = m_bReadOnly;
+	SCOPE_EXIT { SetReadOnly(readonly); };
+	SetReadOnly(false);
+
+	Call(SCI_CLEARALL);
+	Call(SCI_CANCEL);
+
 	char data[4096] = { 0 };
 	size_t lenFile = fread(data, 1, sizeof(data), fp);
 	bool bUTF8 = IsUTF8(data, lenFile);
@@ -1779,4 +1798,10 @@ void CSciEdit::RestyleBugIDs()
 ULONG CSciEdit::GetGestureStatus(CPoint /*ptTouch*/)
 {
 	return 0;
+}
+
+void CSciEdit::SetReadOnly(bool bReadOnly)
+{
+	m_bReadOnly = bReadOnly;
+	Call(SCI_SETREADONLY, m_bReadOnly);
 }
