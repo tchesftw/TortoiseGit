@@ -144,6 +144,7 @@ public:
 	int			LoadFromFile(CString &filename);
 	void		RestyleBugIDs();
 	void		SetReadOnly(bool bReadOnly);
+	void		ClearUndoBuffer();
 
 private:
 	bool IsUTF8(LPVOID pBuffer, size_t cb);
