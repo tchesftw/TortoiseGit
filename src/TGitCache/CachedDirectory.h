@@ -1,4 +1,4 @@
-// TortoiseGit - a Windows shell extension for easy version control
+﻿// TortoiseGit - a Windows shell extension for easy version control
 
 // External Cache Copyright (C) 2005 - 2006, 2008, 2014 - TortoiseSVN
 // Copyright (C) 2008-2012, 2014, 2016-2017 - TortoiseGit
@@ -78,7 +78,7 @@ private:
 	void SetChildStatus(const CString& childDir, git_wc_status_kind childStatus);
 	void KeepChildStatus(const CString& childDir);
 
-private:
+public:
 	CComAutoCriticalSection m_critSec;
 
 	// The cache of files and directories within this directory
