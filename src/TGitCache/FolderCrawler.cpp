@@ -211,7 +211,6 @@ void CFolderCrawler::WorkerThread()
 					m_bPathsAddedSinceLastCrawl = false;
 
 					workingPath = m_pathsToUpdate.Pop();
-					CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A0 %s\n", workingPath.GetWinPath());
 					if ((!m_blockedPath.IsEmpty()) && (m_blockedPath.IsAncestorOf(workingPath)))
 					{
 						// move the path to the end of the list
@@ -227,14 +226,12 @@ void CFolderCrawler::WorkerThread()
 					continue;
 				// check if the changed path is inside an .git folder
 				CString projectroot;
-				CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A1 %s\n", workingPath.GetWinPath());
 				if ((workingPath.HasAdminDir(&projectroot)&&workingPath.IsDirectory()) || workingPath.IsAdminDir())
 				{
 					// we don't crawl for paths changed in a tmp folder inside an .git folder.
 					// Because we also get notifications for those even if we just ask for the status!
 					// And changes there don't affect the file status at all, so it's safe
 					// to ignore notifications on those paths.
-					CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A2 %s\n", workingPath.GetWinPath());
 					if (workingPath.IsAdminDir())
 					{
 						// TODO: add git specific filters here. is there really any change besides index file in .git
@@ -265,7 +262,6 @@ void CFolderCrawler::WorkerThread()
 					}
 					else if (!workingPath.Exists())
 					{
-						CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A3 %s\n", workingPath.GetWinPath());
 						CAutoWriteLock writeLock(CGitStatusCache::Instance().GetGuard());
 						CGitStatusCache::Instance().RemoveCacheForPath(workingPath);
 						continue;
@@ -301,7 +297,6 @@ void CFolderCrawler::WorkerThread()
 						{
 							git_wc_status_kind status = pCachedDir->GetCurrentFullStatus();
 							pCachedDir->Invalidate();
-							CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A4 %s\n", workingPath.GetWinPath());
 							if (workingPath.Exists())
 							{
 								pCachedDir->RefreshStatus(bRecursive);
@@ -318,7 +313,6 @@ void CFolderCrawler::WorkerThread()
 							}
 							else
 							{
-								CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A5 %s\n", workingPath.GetWinPath());
 								CAutoWriteLock writeLock(CGitStatusCache::Instance().GetGuard());
 								CGitStatusCache::Instance().RemoveCacheForPath(workingPath);
 							}
@@ -332,10 +326,8 @@ void CFolderCrawler::WorkerThread()
 				}
 				else if (workingPath.HasAdminDir())
 				{
-					CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A6 %s\n", workingPath.GetWinPath());
 					if (!workingPath.Exists())
 					{
-						CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A7 %s\n", workingPath.GetWinPath());
 						CAutoWriteLock writeLock(CGitStatusCache::Instance().GetGuard());
 						CGitStatusCache::Instance().RemoveCacheForPath(workingPath);
 						if (!workingPath.GetContainingDirectory().Exists())
@@ -368,25 +360,30 @@ void CFolderCrawler::WorkerThread()
 				}
 				else
 				{
-					CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A9 %s\n", workingPath.GetWinPath());
 					if (!workingPath.Exists())
 					{
+						CTGitPath oldPath = workingPath;
 						CAutoWriteLock writeLock(CGitStatusCache::Instance().GetGuard());
+						bool cleaned = false;
 						do
 						{
 							CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A10 %s, %s\n", workingPath.GetWinPath(), workingPath.GetDirectory().GetWinPath());
 							if (auto cachedDir = CGitStatusCache::Instance().GetDirectoryCacheEntryNoCreate(workingPath.GetDirectory()); cachedDir)
 							{
 								CString projectDir;
-								int blup = cachedDir->m_directoryPath.HasAdminDir(&projectDir);
-								CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A11 %s, %d, %s\n", cachedDir->m_directoryPath.GetWinPath(), blup, (LPCTSTR)projectDir);
-								CGitStatusCache::Instance().CloseWatcherHandles(projectDir);
-								CGitStatusCache::Instance().RemoveCacheForPath(projectDir);
+								if (cachedDir->m_directoryPath.HasAdminDir(&projectDir))
+								{
+									CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A11 %s, %d, %s\n", cachedDir->m_directoryPath.GetWinPath(), 1, (LPCTSTR)projectDir);
+									CGitStatusCache::Instance().CloseWatcherHandles(projectDir);
+									CGitStatusCache::Instance().RemoveCacheForPath(projectDir);
+									cleaned = true;
+								}
 								break;
 							}
-							CGitStatusCache::Instance().RemoveCacheForPath(workingPath);
 							workingPath = workingPath.GetContainingDirectory();
 						} while (!workingPath.IsEmpty());
+						if (!cleaned)
+							CGitStatusCache::Instance().RemoveCacheForPath(oldPath);
 					}
 				}
 			}
@@ -400,7 +397,7 @@ void CFolderCrawler::WorkerThread()
 					// without this, a missing file/folder is still treated as missing even if it is available
 					// now when crawling.
 					workingPath = CTGitPath(m_foldersToUpdate.Pop().GetWinPath());
-					CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": B0 %s\n", workingPath.GetWinPath());
+
 					if ((!m_blockedPath.IsEmpty())&&(m_blockedPath.IsAncestorOf(workingPath)))
 					{
 						// move the path to the end of the list
@@ -445,15 +442,10 @@ void CFolderCrawler::WorkerThread()
 						{
 							CAutoWriteLock writeLock(CGitStatusCache::Instance().GetGuard());
 							CGitStatusCache::Instance().RemoveCacheForPath(workingPath);
-							CString oldProjectDir;
-							cachedDir->m_directoryPath.HasAdminDir(&oldProjectDir);
-							CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": FUCK: %s, %s\n", workingPath.GetWinPath(), (LPCTSTR)oldProjectDir);
-							CGitStatusCache::Instance().CloseWatcherHandles(oldProjectDir);
 							// now cacheDir is invalid because it got deleted in the RemoveCacheForPath() call above.
 							cachedDir = nullptr;
 						}
 					}
-
 					if (cachedDir)
 						cachedDir->RefreshStatus(bRecursive);
 				}

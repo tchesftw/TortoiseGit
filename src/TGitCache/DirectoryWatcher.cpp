@@ -1,4 +1,4 @@
-﻿// TortoiseGit - a Windows shell extension for easy version control
+// TortoiseGit - a Windows shell extension for easy version control
 
 // External Cache Copyright (C) 2005-2008, 2011-2012 - TortoiseSVN
 // Copyright (C) 2008-2017, 2019 - TortoiseGit
@@ -462,15 +462,14 @@ void CDirectoryWatcher::WorkerThread()
 								}
 
 								CTGitPath path;
-								if ((pFound = wcsstr(buf, L".git")) != nullptr && (*(pFound + 4) == '\\'))
+								bool isIndex = false;
+								if ((pFound = wcsstr(buf, L".git")) != nullptr)
 								{
 									// omit repository data change except .git/index.lock- or .git/HEAD.lock-files
 									if (reinterpret_cast<ULONG_PTR>(pnotify) - reinterpret_cast<ULONG_PTR>(pdi->m_Buffer) > READ_DIR_CHANGE_BUFFER_SIZE)
 										break;
 
-									pFound[4] = L'\0';
-									pFound += 5;
-									path = g_AdminDirMap.GetWorkingCopy(CTGitPath(buf).GetWinPathString());
+									path = g_AdminDirMap.GetWorkingCopy(CTGitPath(buf).GetContainingDirectory().GetWinPathString());
 
 									if ((wcsstr(pFound, L"index.lock") || wcsstr(pFound, L"HEAD.lock")) && pnotify->Action == FILE_ACTION_ADDED)
 									{
@@ -478,9 +477,12 @@ void CDirectoryWatcher::WorkerThread()
 										continue;
 									}
 									else if (((wcsstr(pFound, L"index.lock") || wcsstr(pFound, L"HEAD.lock")) && pnotify->Action == FILE_ACTION_REMOVED) || (((wcsstr(pFound, L"index") && !wcsstr(pFound, L"index.lock")) || (wcsstr(pFound, L"HEAD") && wcsstr(pFound, L"HEAD.lock"))) && pnotify->Action == FILE_ACTION_MODIFIED) || ((!wcsstr(pFound, L"index.lock") || wcsstr(pFound, L"HEAD.lock")) && pnotify->Action == FILE_ACTION_RENAMED_NEW_NAME))
+									{
+										isIndex = true;
 										CGitStatusCache::Instance().BlockPath(path, 1);
+									}
 									else
-										CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": path %s\n", path.GetWinPath());
+										continue;
 								}
 								else
 									path.SetFromUnknown(buf);
@@ -593,8 +595,6 @@ bool CDirectoryWatcher::CloseHandlesForPath(const CTGitPath& path)
 
 	if (watchInfoMap.empty())
 		return false;
-
-	CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": CloseHandlesForPath %s\n", path.GetWinPath());
 
 	for (TInfoMap::iterator I = watchInfoMap.begin(); I != watchInfoMap.end(); ++I)
 	{
