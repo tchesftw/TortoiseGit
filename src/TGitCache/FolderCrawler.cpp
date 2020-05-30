@@ -366,7 +366,7 @@ void CFolderCrawler::WorkerThread()
 				}
 				else
 				{
-					CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A10 %s, %d\n", workingPath.GetWinPath(), workingPath.HasAdminDir() ? 1 : 0);
+					CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A10 %s, admindir %d, exists %d\n", workingPath.GetWinPath(), workingPath.HasAdminDir() ? 1 : 0, workingPath.Exists() ? 1:0);
 					//if (!workingPath.Exists())
 					{
 						CTGitPath oldPath = workingPath;
