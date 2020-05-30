@@ -350,6 +350,12 @@ void CFolderCrawler::WorkerThread()
 						// automatically if the status is asked for it and the file times don't match
 						// anymore, so we don't need to manually invalidate those.
 						CCachedDirectory* cachedDir = CGitStatusCache::Instance().GetDirectoryCacheEntry(workingPath.GetDirectory());
+						if (cachedDir->m_directoryPath.GetFileOrDirectoryName() == L".git")
+						{
+							CGitStatusCache::Instance().RemoveCacheForPath(workingPath);
+							// now cacheDir is invalid because it got deleted in the RemoveCacheForPath() call above.
+							cachedDir = nullptr;
+						}
 						if (cachedDir && workingPath.IsDirectory())
 							cachedDir->Invalidate();
 						if (cachedDir && cachedDir->GetStatusForMember(workingPath, bRecursive).GetEffectiveStatus() > git_wc_status_unversioned)
@@ -360,20 +366,21 @@ void CFolderCrawler::WorkerThread()
 				}
 				else
 				{
-					if (!workingPath.Exists())
+					CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A10 %s, %d\n", workingPath.GetWinPath(), workingPath.HasAdminDir() ? 1 : 0);
+					//if (!workingPath.Exists())
 					{
 						CTGitPath oldPath = workingPath;
 						CAutoWriteLock writeLock(CGitStatusCache::Instance().GetGuard());
 						bool cleaned = false;
 						do
 						{
-							CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A10 %s, %s\n", workingPath.GetWinPath(), workingPath.GetDirectory().GetWinPath());
+							CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A11 %s, %s\n", workingPath.GetWinPath(), workingPath.GetDirectory().GetWinPath());
 							if (auto cachedDir = CGitStatusCache::Instance().GetDirectoryCacheEntryNoCreate(workingPath.GetDirectory()); cachedDir)
 							{
 								CString projectDir;
 								if (cachedDir->m_directoryPath.HasAdminDir(&projectDir))
 								{
-									CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A11 %s, %d, %s\n", cachedDir->m_directoryPath.GetWinPath(), 1, (LPCTSTR)projectDir);
+									CTraceToOutputDebugString::Instance()(_T(__FUNCTION__) L": A12 %s, %d, %s\n", cachedDir->m_directoryPath.GetWinPath(), 1, (LPCTSTR)projectDir);
 									CGitStatusCache::Instance().CloseWatcherHandles(projectDir);
 									CGitStatusCache::Instance().RemoveCacheForPath(projectDir);
 									cleaned = true;
@@ -382,7 +389,7 @@ void CFolderCrawler::WorkerThread()
 							}
 							workingPath = workingPath.GetContainingDirectory();
 						} while (!workingPath.IsEmpty());
-						if (!cleaned)
+						if (!workingPath.Exists() && !cleaned)
 							CGitStatusCache::Instance().RemoveCacheForPath(oldPath);
 					}
 				}

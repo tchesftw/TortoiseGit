@@ -1,4 +1,4 @@
-// TortoiseGit - a Windows shell extension for easy version control
+﻿// TortoiseGit - a Windows shell extension for easy version control
 
 // External Cache Copyright (C) 2005-2008, 2011-2012 - TortoiseSVN
 // Copyright (C) 2008-2017, 2019 - TortoiseGit
@@ -481,8 +481,6 @@ void CDirectoryWatcher::WorkerThread()
 										isIndex = true;
 										CGitStatusCache::Instance().BlockPath(path, 1);
 									}
-									else
-										continue;
 								}
 								else
 									path.SetFromUnknown(buf);

@@ -411,7 +411,7 @@ void CGitStatusCache::RemoveCacheForPath(const CTGitPath& path)
 		dirtoremove = itMap->second;
 	if (!dirtoremove)
 		return;
-	ATLASSERT(path.IsEquivalentToWithoutCase(dirtoremove->m_directoryPath));
+	//ATLASSERT(path.IsEquivalentToWithoutCase(dirtoremove->m_directoryPath));
 	RemoveCacheForDirectory(dirtoremove, path);
 }
 
