@@ -870,6 +870,15 @@ BOOL CTreePropSheet::OnInitDialog()
 	}
 	SetWindowTheme(m_pwndPageTree->GetSafeHwnd(), L"Explorer", nullptr);
 
+	// Apply configured system font
+	NONCLIENTMETRICS ncm;
+	ncm.cbSize = sizeof(ncm);
+	SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
+	LOGFONT lfDlgFont = ncm.lfMessageFont;
+	m_DlgFont.CreateFontIndirect(&lfDlgFont);
+	SetFont(&m_DlgFont, TRUE);
+	SendMessageToDescendants(WM_SETFONT, reinterpret_cast<WPARAM>(static_cast<HGDIOBJ>(m_DlgFont.GetSafeHandle())), MAKELPARAM(FALSE, 0), TRUE);
+
 	// Fill the tree ctrl
 	RefillPageTree();
 

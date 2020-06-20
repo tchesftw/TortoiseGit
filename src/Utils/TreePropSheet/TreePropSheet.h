@@ -500,6 +500,7 @@ private:
 	int m_nPageTreeWidth;
 
 	bool m_bDark = false;
+	CFont m_DlgFont;
 
 // Static Properties
 private:

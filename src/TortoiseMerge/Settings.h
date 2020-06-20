@@ -82,6 +82,7 @@ private:
 	CSetColorPage *		m_pColorPage;
 
 	int m_themeCallbackId;
+	CFont m_DlgFont;
 
 public:
 	CSettings(UINT nIDCaption, CWnd* pParentWnd = nullptr, UINT iSelectPage = 0);

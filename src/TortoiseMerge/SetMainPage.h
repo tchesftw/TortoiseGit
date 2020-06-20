@@ -21,12 +21,14 @@
 
 #include "resource.h"
 #include "registry.h"
+#include "CommonDialogFunctions.h"
 
 /**
  * \ingroup TortoiseMerge
  * Main settings page.
  */
 class CSetMainPage : public CPropertyPage
+	, protected CommonDialogFunctions<CPropertyPage>
 {
 	DECLARE_DYNAMIC(CSetMainPage)
 

@@ -144,4 +144,19 @@ public:
 		bt.ttiIcon = nIcon;
 		m_ctrl->SendDlgItemMessage(nIdControl, EM_SHOWBALLOONTIP, 0, reinterpret_cast<LPARAM>(&bt));
 	}
+
+	void ApplySystemFont()
+	{
+		NONCLIENTMETRICS ncm;
+		ncm.cbSize = sizeof(ncm);
+		SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
+		LOGFONT lfDlgFont = ncm.lfMessageFont;
+		m_DlgFont.CreateFontIndirect(&lfDlgFont);
+
+		m_ctrl->SetFont(&m_DlgFont, TRUE);
+		m_ctrl->SendMessageToDescendants(WM_SETFONT, reinterpret_cast<WPARAM>(static_cast<HGDIOBJ>(m_DlgFont.GetSafeHandle())), MAKELPARAM(FALSE, 0), TRUE);
+	}
+
+protected:
+	CFont m_DlgFont;
 };

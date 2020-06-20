@@ -28,6 +28,7 @@
 IMPLEMENT_DYNAMIC(CSetColorPage, CPropertyPage)
 CSetColorPage::CSetColorPage()
 	: CPropertyPage(CSetColorPage::IDD)
+	, CommonDialogFunctions(this)
 	, m_bReloadNeeded(FALSE)
 	, m_regInlineAdded(L"Software\\TortoiseGitMerge\\Colors\\InlineAdded", INLINEADDED_COLOR)
 	, m_regInlineRemoved(L"Software\\TortoiseGitMerge\\Colors\\InlineRemoved", INLINEREMOVED_COLOR)
@@ -206,6 +207,8 @@ BOOL CSetColorPage::OnInitDialog()
 	m_themeCallbackId = CTheme::Instance().RegisterThemeChangeCallback([this]() { CTheme::Instance().SetThemeForDialog(GetSafeHwnd(), CTheme::Instance().IsDarkTheme()); });
 
 	CTheme::Instance().SetThemeForDialog(GetSafeHwnd(), CTheme::Instance().IsDarkTheme());
+
+	ApplySystemFont();
 
 	return TRUE; // return TRUE unless you set the focus to a control
 	// EXCEPTION: OCX Property Pages should return FALSE
