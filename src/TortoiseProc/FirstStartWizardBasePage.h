@@ -1,6 +1,6 @@
 ﻿// TortoiseGit - a Windows shell extension for easy version control
 
-// Copyright (C) 2016-2017, 2019-2020 - TortoiseGit
+// Copyright (C) 2016-2017, 2019 - TortoiseGit
 
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -38,15 +38,6 @@ public:
 		: CPropertyPageEx(lpszTemplateName, nIDCaption, static_cast<UINT>(0))
 		, CommonDialogFunctions(this)
 		{}
-
-	BOOL OnInitDialog()
-	{
-		__super::OnInitDialog();
-
-		ApplySystemFont();
-
-		return FALSE;
-	}
 
 	virtual ~CFirstStartWizardBasePage() {}
 	virtual bool	OkToCancel() { return true; }

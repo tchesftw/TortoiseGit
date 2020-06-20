@@ -99,4 +99,5 @@ private:
 	int m_lastThemeChangeCallbackId;
 	CRegStdDWORD m_regDarkTheme;
 	static HBRUSH s_backBrush;
+	static HFONT ms_DlgFont;
 };

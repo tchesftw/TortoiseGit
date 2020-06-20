@@ -76,6 +76,10 @@ void CHyperLink::PreSubclassWindow()
 	}
 
 	LOGFONT lf;
+	CFont* pFont = GetFont();
+	if (pFont && CRegDWORD(L"Software\\TortoiseGit\\UseMessageFont", FALSE) != FALSE)
+		pFont->GetObject(sizeof(lf), &lf);
+	else
 	{
 		NONCLIENTMETRICS metrics = { 0 };
 		metrics.cbSize = sizeof(NONCLIENTMETRICS);

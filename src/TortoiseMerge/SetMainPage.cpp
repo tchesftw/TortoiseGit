@@ -31,7 +31,6 @@
 IMPLEMENT_DYNAMIC(CSetMainPage, CPropertyPage)
 CSetMainPage::CSetMainPage()
 	: CPropertyPage(CSetMainPage::IDD)
-	, CommonDialogFunctions(this)
 	, m_bBackup(FALSE)
 	, m_bFirstDiffOnLoad(FALSE)
 	, m_bFirstConflictOnLoad(FALSE)
@@ -213,8 +212,6 @@ BOOL CSetMainPage::OnInitDialog()
 
 	m_themeCallbackId = CTheme::Instance().RegisterThemeChangeCallback([this]() { CTheme::Instance().SetThemeForDialog(GetSafeHwnd(), CTheme::Instance().IsDarkTheme()); });
 	CTheme::Instance().SetThemeForDialog(GetSafeHwnd(), CTheme::Instance().IsDarkTheme());
-
-	ApplySystemFont();
 
 	UpdateData(FALSE);
 	return TRUE;  // return TRUE unless you set the focus to a control

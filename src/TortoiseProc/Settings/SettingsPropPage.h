@@ -67,7 +67,6 @@ protected:
 		CPropertyPage::OnInitDialog();
 		m_tooltips.Create(this);
 		CTheme::Instance().SetThemeForDialog(GetSafeHwnd(), CTheme::Instance().IsDarkTheme());
-		ApplySystemFont();
 		return FALSE;
 	}
 	virtual BOOL PreTranslateMessage(MSG* pMsg) override

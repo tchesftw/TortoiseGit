@@ -75,8 +75,6 @@ protected:
 		if (CustomBreak)
 			SetUrlWordBreakProcToChildWindows(GetSafeHwnd(), CustomBreak == 2);
 
-		ApplySystemFont();
-
 		return FALSE;
 	}
 

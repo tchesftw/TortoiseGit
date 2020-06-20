@@ -20,14 +20,13 @@
 #pragma once
 
 #include "registry.h"
-#include "CommonDialogFunctions.h"
+
 
 /**
  * \ingroup TortoiseMerge
  * Color settings page
  */
 class CSetColorPage : public CPropertyPage
-	, protected CommonDialogFunctions<CPropertyPage>
 {
 	DECLARE_DYNAMIC(CSetColorPage)
 

@@ -185,17 +185,20 @@ void SetTheme(HWND hWnd)
 			SetWindowTheme(::GetDlgItem(hWnd, id), L"Explorer", nullptr);
 	}
 
-	// Apply the configured system font
-	NONCLIENTMETRICS ncm;
-	ncm.cbSize = sizeof(ncm);
-	SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
-	LOGFONT lfDlgFont = ncm.lfMessageFont;
-	g_font = ::CreateFontIndirect(&lfDlgFont);
-	SendMessage(hWnd, WM_SETFONT, reinterpret_cast<WPARAM>(g_font), MAKELPARAM(FALSE, 0));
-	for (UINT id : { IDOK, IDCANCEL, IDC_STATIC_TITLE, IDC_PASSWORD })
+	if (CRegStdDWORD(L"Software\\TortoiseGit\\UseMessageFont", FALSE) != FALSE)
 	{
-		HWND ctrl = ::GetDlgItem(hWnd, id);
-		SendMessage(ctrl, WM_SETFONT, reinterpret_cast<WPARAM>(g_font), MAKELPARAM(FALSE, 0));
+		// Apply the configured system font
+		NONCLIENTMETRICS ncm;
+		ncm.cbSize = sizeof(ncm);
+		SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
+		LOGFONT lfDlgFont = ncm.lfMessageFont;
+		g_font = ::CreateFontIndirect(&lfDlgFont);
+		SendMessage(hWnd, WM_SETFONT, reinterpret_cast<WPARAM>(g_font), MAKELPARAM(FALSE, 0));
+		for (UINT id : { IDOK, IDCANCEL, IDC_STATIC_TITLE, IDC_PASSWORD })
+		{
+			HWND ctrl = ::GetDlgItem(hWnd, id);
+			SendMessage(ctrl, WM_SETFONT, reinterpret_cast<WPARAM>(g_font), MAKELPARAM(FALSE, 0));
+		}
 	}
 
 	::RedrawWindow(hWnd, nullptr, nullptr, RDW_FRAME | RDW_INVALIDATE | RDW_ERASE | RDW_INTERNALPAINT | RDW_ALLCHILDREN | RDW_UPDATENOW);
