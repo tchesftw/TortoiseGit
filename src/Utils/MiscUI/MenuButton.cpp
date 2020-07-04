@@ -98,6 +98,28 @@ INT_PTR CMenuButton::AddEntries(const CStringArray& sEntries)
 	return ret;
 }
 
+void CMenuButton::FixFont()
+{
+	CWnd* pWnd = GetParent();
+
+	if (pWnd == nullptr)
+		return;
+
+	CFont* pFont = pWnd->GetFont();
+	if (pFont == nullptr)
+		return;
+
+	LOGFONT logfont;
+	if (pFont->GetLogFont(&logfont) == 0)
+		return;
+
+	if (m_Font.CreateFontIndirect(&logfont) == FALSE)
+		return;
+
+	SetFont(&m_Font);
+	Invalidate();
+}
+
 BEGIN_MESSAGE_MAP(CMenuButton, CMFCMenuButton)
 	ON_WM_DESTROY()
 	ON_CONTROL_REFLECT_EX(BN_CLICKED, &CMenuButton::OnClicked)
@@ -159,6 +181,9 @@ void CMenuButton::OnDraw(CDC* pDC, const CRect& rect, UINT uiState)
 		CMFCButton::OnDraw(pDC, rect, uiState);
 	else
 		__super::OnDraw(pDC, rect, uiState);
+
+	if (m_Font.m_hObject == nullptr)
+		FixFont();
 }
 
 void CMenuButton::OnLButtonDown(UINT nFlags, CPoint point)
@@ -172,6 +197,7 @@ void CMenuButton::OnLButtonDown(UINT nFlags, CPoint point)
 LRESULT CMenuButton::OnThemeChanged()
 {
 	CMFCVisualManager::GetInstance()->DestroyInstance();
+	m_Font.DeleteObject();
 	return 0L;
 }
 

@@ -1,6 +1,6 @@
 ﻿// TortoiseGit - a Windows shell extension for easy version control
 
-// Copyright (C) 2012-2016, 2019-2020 - TortoiseGit
+// Copyright (C) 2012-2016, 2019 - TortoiseGit
 // Copyright (C) 2003-2006,2008, 2011, 2018 - TortoiseSVN
 
 // This program is free software; you can redistribute it and/or
@@ -77,7 +77,7 @@ void CHyperLink::PreSubclassWindow()
 
 	LOGFONT lf;
 	CFont* pFont = GetFont();
-	if (pFont && CRegDWORD(L"Software\\TortoiseGit\\UseMessageFont", FALSE) != FALSE)
+	if (pFont)
 		pFont->GetObject(sizeof(lf), &lf);
 	else
 	{

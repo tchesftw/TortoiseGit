@@ -44,7 +44,6 @@ static BOOL DetermineGlowSize(int* piSize, LPCWSTR pszClassIdList = nullptr);
 static BOOL GetEditBorderColor(HWND hWnd, COLORREF* pClr);
 
 HBRUSH CTheme::s_backBrush = nullptr;
-HFONT CTheme::ms_DlgFont = nullptr;
 
 CTheme::CTheme()
 	: m_bLoaded(false)
@@ -61,8 +60,6 @@ CTheme::~CTheme()
 {
 	if (s_backBrush)
 		DeleteObject(s_backBrush);
-	if (ms_DlgFont)
-		::DeleteObject(ms_DlgFont);
 }
 
 CTheme& CTheme::Instance()
@@ -80,20 +77,6 @@ void CTheme::Load()
 	OnSysColorChanged();
 	m_dark = !!m_regDarkTheme && IsDarkModeAllowed() && !IsHighContrastMode() && DarkModeHelper::Instance().ShouldAppsUseDarkMode();
 	m_bLoaded = true;
-
-	if (ms_DlgFont)
-	{
-		::DeleteObject(ms_DlgFont);
-		ms_DlgFont = nullptr;
-	}
-	if (CRegStdDWORD(L"Software\\TortoiseGit\\UseMessageFont", FALSE) == FALSE)
-		return;
-	// Apply configured system font
-	NONCLIENTMETRICS ncm;
-	ncm.cbSize = sizeof(ncm);
-	SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
-	LOGFONT lfDlgFont = ncm.lfMessageFont;
-	ms_DlgFont = ::CreateFontIndirect(&lfDlgFont);
 }
 
 bool CTheme::IsHighContrastMode() const
@@ -165,8 +148,6 @@ bool CTheme::SetThemeForDialog(HWND hWnd, bool bDark)
 		SetWindowSubclass(hWnd, MainSubclassProc, SubclassID, reinterpret_cast<DWORD_PTR>(&s_backBrush));
 	else
 		RemoveWindowSubclass(hWnd, MainSubclassProc, SubclassID);
-	if (ms_DlgFont)
-		SendMessage(hWnd, WM_SETFONT, reinterpret_cast<WPARAM>(ms_DlgFont), MAKELPARAM(FALSE, 0));
 	EnumChildWindows(hWnd, AdjustThemeForChildrenProc, bDark ? TRUE : FALSE);
 	EnumThreadWindows(GetCurrentThreadId(), AdjustThemeForChildrenProc, bDark ? TRUE : FALSE);
 	::RedrawWindow(hWnd, nullptr, nullptr, RDW_FRAME | RDW_INVALIDATE | RDW_ERASE | RDW_INTERNALPAINT | RDW_ALLCHILDREN | RDW_UPDATENOW);
@@ -176,8 +157,6 @@ bool CTheme::SetThemeForDialog(HWND hWnd, bool bDark)
 BOOL CTheme::AdjustThemeForChildrenProc(HWND hwnd, LPARAM lParam)
 {
 	DarkModeHelper::Instance().AllowDarkModeForWindow(hwnd, static_cast<BOOL>(lParam));
-	if (ms_DlgFont)
-		SendMessage(hwnd, WM_SETFONT, reinterpret_cast<WPARAM>(ms_DlgFont), MAKELPARAM(FALSE, 0));
 	TCHAR szWndClassName[MAX_PATH] = { 0 };
 	GetClassName(hwnd, szWndClassName, _countof(szWndClassName));
 	if (lParam)
