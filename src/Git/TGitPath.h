@@ -38,6 +38,14 @@ public:
 	int m_Stage;
 	int m_ParentNo;
 
+	enum StagingStatus : unsigned int
+	{
+		STAGING_STATUS_DONT_CARE = 0,
+		STAGING_STATUS_TOTALLY_STAGED = 1,
+		STAGING_STATUS_PARTIALLY_STAGED = 2,
+		STAGING_STATUS_TOTALLY_UNSTAGED = 3
+	};
+
 	enum Actions : unsigned int
 	{
 		LOGACTIONS_ADDED	= 0x00000001,
@@ -60,6 +68,7 @@ public:
 
 	CString m_StatAdd;
 	CString m_StatDel;
+	StagingStatus m_stagingStatus;
 #ifdef TGIT_LFS
 	CString m_LFSLockOwner;
 #endif
@@ -361,6 +370,7 @@ public:
 	const CTGitPath* LookForGitPath(const CString& path) const;
 	int	ParserFromLog(BYTE_VECTOR &log, bool parseDeletes = false);
 	int ParserFromLsFile(BYTE_VECTOR &out,bool staged=true);
+	void UpdateStagingStatusFromPath(const CString& path, CTGitPath::StagingStatus status);
 	int FillUnRev(unsigned int Action, const CTGitPathList* filterlist = nullptr, CString* err = nullptr);
 #ifdef TGIT_LFS
 	int FillLFSLocks(unsigned int action, CString* err = nullptr);

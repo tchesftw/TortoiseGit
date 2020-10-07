@@ -2547,31 +2547,36 @@ unsigned int CGit::Hash2int(const CGitHash &hash)
 	return ret;
 }
 
-int CGit::RefreshGitIndex()
+int CGit::RefreshGitIndex(bool really /* = false*/)
 {
 	CString adminDir;
 	GitAdminDir::GetAdminDirPath(g_Git.m_CurrentDir, adminDir);
-	// HACK: don't use internal update-index if we have a git-lfs enabled repository as the libgit version fails when executing the filter, issue #3220
-	if (g_Git.m_IsUseGitDLL && !PathFileExists(adminDir + L"lfs"))
+	if (!really)
 	{
-		CAutoLocker lock(g_Git.m_critGitDllSec);
-		try
+		// HACK: don't use internal update-index if we have a git-lfs enabled repository as the libgit version fails when executing the filter, issue #3220
+		if (g_Git.m_IsUseGitDLL && !PathFileExists(adminDir + L"lfs"))
 		{
-			g_Git.CheckAndInitDll();
+			CAutoLocker lock(g_Git.m_critGitDllSec);
+			try
+			{
+				g_Git.CheckAndInitDll();
 
-			int result = git_update_index();
-			git_exit_cleanup();
-			return result;
+				int result = git_update_index();
+				git_exit_cleanup();
+				return result;
 
-		}catch(...)
-		{
-			git_exit_cleanup();
-			return -1;
+			}catch(...)
+			{
+				git_exit_cleanup();
+				return -1;
+			}
+
 		}
-
+		else
+			return Run(L"git.exe update-index --refresh", nullptr, nullptr, CP_UTF8);
 	}
 	else
-		return Run(L"git.exe update-index --refresh", nullptr, nullptr, CP_UTF8);
+		return Run(L"git.exe update-index --really-refresh", nullptr, nullptr, CP_UTF8);
 }
 
 int CGit::GetOneFile(const CString &Refname, const CTGitPath &path, const CString &outputfile)
@@ -3232,7 +3237,7 @@ bool CGit::LoadTextFile(const CString &filename, CString &msg)
 	return true; // load no further files
 }
 
-int CGit::GetWorkingTreeChanges(CTGitPathList& result, bool amend, const CTGitPathList* filterlist, bool includedStaged /* = false */)
+int CGit::GetWorkingTreeChanges(CTGitPathList& result, bool amend, const CTGitPathList* filterlist, bool includedStaged /* = false */, bool getStagingStatus /* = false */)
 {
 	if (IsInitRepos())
 		return GetInitAddList(result);
@@ -3299,6 +3304,55 @@ int CGit::GetWorkingTreeChanges(CTGitPathList& result, bool amend, const CTGitPa
 		out.append(cmdout, 0);
 	}
 	result.ParserFromLog(out);
+
+	if (getStagingStatus)
+	{
+		for (int i = 0; i < count; ++i)
+		{
+			BYTE_VECTOR cmdStagedOut, cmdUnstagedOut;
+			CString cmd;
+
+			if (!filterlist)
+				cmd = L"git.exe diff-index --cached --raw " + head + L" --numstat -C -M -z --";
+			else
+				cmd.Format(L"git.exe diff-index --cached --raw %s --numstat -C -M -z -- \"%s\"", static_cast<LPCTSTR>(head), static_cast<LPCTSTR>((*filterlist)[i].GetGitPathString()));
+
+			Run(cmd, &cmdStagedOut);
+
+			CTGitPathList staged;
+			staged.ParserFromLog(cmdStagedOut);
+
+			if (!filterlist)
+				cmd = L"git.exe diff-files --raw --numstat -C -M -z --";
+			else
+				cmd.Format(L"git.exe diff-files --raw --numstat -C -M -z -- \"%s\"", static_cast<LPCTSTR>((*filterlist)[i].GetGitPathString()));
+
+			Run(cmd, &cmdUnstagedOut);
+
+			CTGitPathList unstaged;
+			unstaged.ParserFromLog(cmdUnstagedOut);
+
+			// File shows up both in the output of diff-index --cached and diff-files: partially staged
+			// File shows up only in the output of diff-index --cached: totally staged
+			// File shows up only in the output of diff-files: totally unstaged
+			// FIXME: This is inefficient. It would be better if ParserFromLog received the output of each command
+			// separately and did this processing there, dropping the new function UpdateStagingStatusFromPath entirely.
+			for (int j = 0; j < staged.GetCount(); ++j)
+			{
+				CString path = staged[j].GetGitPathString();
+				if (unstaged.LookForGitPath(path))
+					result.UpdateStagingStatusFromPath(path, CTGitPath::StagingStatus::STAGING_STATUS_PARTIALLY_STAGED);
+				else
+					result.UpdateStagingStatusFromPath(path, CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_STAGED);
+			}
+			for (int j = 0; j < unstaged.GetCount(); ++j)
+			{
+				CString path = unstaged[j].GetGitPathString();
+				if (!staged.LookForGitPath(path))
+					result.UpdateStagingStatusFromPath(path, CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_UNSTAGED);
+			}
+		}
+	}
 
 	std::map<CString, int> duplicateMap;
 	for (int i = 0; i < result.GetCount(); ++i)

@@ -275,6 +275,7 @@ CGitStatusListCtrl::CGitStatusListCtrl() : CResizableColumnsListCtrl<CListCtrl>(
 	, m_nBlockItemChangeHandler(0)
 	, m_bIncludedStaged(false)
 	, m_bEnableDblClick(true)
+	, m_bThreeStateCheckboxes(false)
 {
 	m_bNoAutoselectMissing = CRegDWORD(L"Software\\TortoiseGit\\AutoselectMissingFiles", FALSE) == TRUE;
 
@@ -393,6 +394,30 @@ void CGitStatusListCtrl::Init(DWORD dwColumns, const CString& sColumnInfoContain
 	m_bWaitCursor = false;
 }
 
+void CGitStatusListCtrl::EnableThreeStateCheckboxes(bool enable)
+{
+	CImageList* stateImageList = GetImageList(LVSIL_STATE);
+	int numStateImageList = stateImageList->GetImageCount();
+	if (!enable)
+	{
+		if (m_bThreeStateCheckboxes)
+		{
+			VERIFY(numStateImageList == 3);
+			stateImageList->Remove(2);
+			m_bThreeStateCheckboxes = false;
+		}
+	}
+	else
+	{
+		if (!m_bThreeStateCheckboxes)
+		{
+			VERIFY(numStateImageList == 2);
+			stateImageList->Add(CCommonAppUtils::LoadIconEx(IDI_INDETERMINATE, 0, 0));
+			m_bThreeStateCheckboxes = true;
+		}
+	}
+}
+
 bool CGitStatusListCtrl::SetBackgroundImage(UINT nID)
 {
 	return CAppUtils::SetListCtrlBackgroundImage(GetSafeHwnd(), nID);
@@ -403,7 +428,8 @@ BOOL CGitStatusListCtrl::GetStatus ( const CTGitPathList* pathList
 									, bool bShowIgnores /* = false */
 									, bool bShowUnRev /* = false */
 									, bool bShowLocalChangesIgnored /* = false */
-									, bool bShowLFSLocks  /* = false */ )
+									, bool bShowLFSLocks  /* = false */
+									, bool bGetStagingStatus /* = false */)
 {
 	CAutoWriteLock locker(m_guard);
 
@@ -427,7 +453,7 @@ BOOL CGitStatusListCtrl::GetStatus ( const CTGitPathList* pathList
 		mask |= CGitStatusListCtrl::FILELIST_LOCALCHANGESIGNORED;
 	if (bShowLFSLocks && hasLFS)
 		mask |= CGitStatusListCtrl::FILELIST_LOCKS;
-	this->UpdateFileList(mask, bUpdate, pathList);
+	this->UpdateFileList(mask, bUpdate, pathList, bGetStagingStatus);
 
 	if (!bShowLFSLocks && hasLFS)
 	{
@@ -690,7 +716,15 @@ void CGitStatusListCtrl::Show(unsigned int dwShow, unsigned int dwCheck /*=0*/, 
 			//set default checkbox status
 			auto entry = const_cast<CTGitPath*>(m_arStatusArray[i]);
 			CString path = entry->GetGitPathString();
-			if (!m_mapFilenameToChecked.empty() && m_mapFilenameToChecked.find(path) != m_mapFilenameToChecked.end())
+			if (m_bThreeStateCheckboxes)
+			{
+				auto stagingStatus = entry->m_stagingStatus;
+				if (stagingStatus == CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_STAGED || stagingStatus == CTGitPath::StagingStatus::STAGING_STATUS_PARTIALLY_STAGED)
+					entry->m_Checked = true;
+				else
+					entry->m_Checked = false;
+			}
+			else if (!m_mapFilenameToChecked.empty() && m_mapFilenameToChecked.find(path) != m_mapFilenameToChecked.end())
 				entry->m_Checked = m_mapFilenameToChecked[path];
 			else if (!UseStoredCheckStatus)
 			{
@@ -941,6 +975,46 @@ void CGitStatusListCtrl::RestoreScrollPos()
 	m_sScrollPos.enabled = false;
 }
 
+// This probably should be moved to the commit window
+void CGitStatusListCtrl::GitStageEntry(CTGitPath* entry)
+{
+	CString cmd, out;
+	cmd.Format(L"git.exe add -- \"%s\"", entry->GetWinPath());
+	if (g_Git.Run(cmd, &out, CP_UTF8))
+		MessageBox(L"Error staging file", L"TortoiseGit", MB_OK | MB_ICONERROR);
+}
+
+// This probably should be moved to the commit window
+void CGitStatusListCtrl::GitUnstageEntry(CTGitPath* entry)
+{
+	CString cmd1, cmd2, out;
+	// git restore --staged would avoid the whole mess below but requires at least git version 2.23
+	if (entry->m_Action & CTGitPath::Actions::LOGACTIONS_ADDED)
+		cmd1.Format(L"git.exe rm -f --cached -- \"%s\"", static_cast<LPCTSTR>(entry->GetWinPathString()));
+	else if (entry->m_Action & CTGitPath::Actions::LOGACTIONS_DELETED)
+		cmd1.Format(L"git.exe reset -- \"%s\"", static_cast<LPCTSTR>(entry->GetWinPathString()));
+	else if (entry->m_Action & CTGitPath::Actions::LOGACTIONS_MODIFIED)
+		cmd1.Format(L"git.exe reset -- \"%s\"", static_cast<LPCTSTR>(entry->GetWinPathString()));
+	else if (entry->m_Action & CTGitPath::Actions::LOGACTIONS_REPLACED)
+	{
+		cmd1.Format(L"git.exe rm -f --cached -- \"%s\"", static_cast<LPCTSTR>(entry->GetWinPathString()));
+		cmd2.Format(L"git.exe reset -- \"%s\"", static_cast<LPCTSTR>(entry->GetGitOldPathString()));
+	}
+	else
+		return;
+
+	if (g_Git.Run(cmd1, &out, CP_UTF8))
+	{
+		MessageBox(L"Error unstaging file:\r\n" + out, L"TortoiseGit", MB_OK | MB_ICONERROR);
+		return;
+	}
+	if (!cmd2.IsEmpty() && g_Git.Run(cmd2, &out, CP_UTF8))
+	{
+		MessageBox(L"Error unstaging file:\r\n" + out, L"TortoiseGit", MB_OK | MB_ICONERROR);
+		return;
+	}
+}
+
 int CGitStatusListCtrl::GetColumnIndex(int mask)
 {
 	for (int i = 0; i < 32; ++i)
@@ -1109,7 +1183,19 @@ void CGitStatusListCtrl::AddEntry(size_t arStatusArrayIndex, CTGitPath * GitPath
 
 	m_arListArray.push_back(arStatusArrayIndex);
 
-	SetCheck(listIndex, GitPath->m_Checked);
+	if (m_bThreeStateCheckboxes) // if three-state, display the staging status in the checkboxes
+	{
+		if (GitPath->m_stagingStatus == CTGitPath::StagingStatus::STAGING_STATUS_PARTIALLY_STAGED)
+			ListView_SetItemState(m_hWnd, listIndex, INDEXTOSTATEIMAGEMASK(3), LVIS_STATEIMAGEMASK)
+		else if (GitPath->m_stagingStatus == CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_STAGED)
+			SetCheck(listIndex, true);
+		else if (GitPath->m_stagingStatus == CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_UNSTAGED)
+			SetCheck(listIndex, false);
+	}
+	else
+	{
+		SetCheck(listIndex, GitPath->m_Checked);
+	}
 	if (GitPath->m_Checked)
 		m_nSelected++;
 
@@ -1201,9 +1287,18 @@ BOOL CGitStatusListCtrl::OnLvnItemchanged(NMHDR *pNMHDR, LRESULT *pResult)
 	bool bSelected = !!(ListView_GetItemState(m_hWnd, pNMLV->iItem, LVIS_SELECTED) & LVIS_SELECTED);
 	int nListItems = GetItemCount();
 
-	// was the item checked?
+	// The checkbox rotates its states from the first to the last then wraps around, so we have to handle clicking a checked (2) checkbox to make
+	// it go back to unckecked (1) state, instead of becoming indeterminate (3).
+	// CListCtrl doesn't support three-state checkboxes natively, so this has to be a bit hackish.
+	if (m_bThreeStateCheckboxes && pNMLV->uNewState == INDEXTOSTATEIMAGEMASK(3) && pNMLV->uOldState == INDEXTOSTATEIMAGEMASK(2) && pNMLV->uChanged == LVIF_STATE)
+	{
+		ScopedInDecrement blocker(m_nBlockItemChangeHandler);
+		ListView_SetItemState(m_hWnd, pNMLV->iItem, INDEXTOSTATEIMAGEMASK(1), LVIS_STATEIMAGEMASK)
+	}
 
-	if (GetCheck(pNMLV->iItem))
+	// GetCheck would return true when the three-state checkbox is in the indeterminate state as well,
+	// but this will never happen because of the code above and also because this handler is blocked during AddEntry
+	if (GetCheck(pNMLV->iItem)) // was the item checked?
 	{
 		{
 			ScopedInDecrement blocker(m_nBlockItemChangeHandler);
@@ -1315,6 +1410,11 @@ void CGitStatusListCtrl::CheckEntry(int index, int /*nListItems*/)
 		path->m_Checked = TRUE;
 		m_nSelected++;
 	}
+	if (m_bThreeStateCheckboxes)
+	{
+		GitStageEntry(path);
+		path->m_stagingStatus = CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_STAGED;
+	}
 }
 
 void CGitStatusListCtrl::UncheckEntry(int index, int /*nListItems*/)
@@ -1366,6 +1466,11 @@ void CGitStatusListCtrl::UncheckEntry(int index, int /*nListItems*/)
 	{
 		path->m_Checked  = FALSE;
 		m_nSelected--;
+	}
+	if (m_bThreeStateCheckboxes)
+	{
+		GitUnstageEntry(path);
+		path->m_stagingStatus = CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_UNSTAGED;
 	}
 }
 void CGitStatusListCtrl::BuildStatistics()
@@ -3189,10 +3294,13 @@ void CGitStatusListCtrl::Check(DWORD dwCheck, bool check)
 			else
 				showFlags |= GITSLC_SHOWFILES;
 
-			if (check && (showFlags & dwCheck) && !GetCheck(i) && !(entry->IsDirectory() && m_bDoNotAutoselectSubmodules && !(dwCheck & GITSLC_SHOWSUBMODULES)))
+			UINT state = ListView_GetItemState(m_hWnd, i, LVIS_STATEIMAGEMASK); // GetCheck would return true for a partially staged file
+			if (check && (showFlags & dwCheck) && state != INDEXTOSTATEIMAGEMASK(2) && !(entry->IsDirectory() && m_bDoNotAutoselectSubmodules && !(dwCheck & GITSLC_SHOWSUBMODULES)))
 			{
+				// was unchecked or indeterminate
 				SetEntryCheck(entry, i, true);
-				m_nSelected++;
+				if (state == INDEXTOSTATEIMAGEMASK(1)) // was unchecked
+					m_nSelected++;
 			}
 			else if (!check && (showFlags & dwCheck) && GetCheck(i))
 			{
@@ -3389,6 +3497,19 @@ void CGitStatusListCtrl::SetEntryCheck(CTGitPath* pEntry, int listboxIndex, bool
 	CAutoWriteLock locker(m_guard);
 	pEntry->m_Checked = bCheck;
 	m_mapFilenameToChecked[pEntry->GetGitPathString()] = bCheck;
+	if (m_bThreeStateCheckboxes)
+	{
+		if (bCheck)
+		{
+			GitStageEntry(pEntry);
+			pEntry->m_stagingStatus = CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_STAGED;
+		}
+		else
+		{
+			GitUnstageEntry(pEntry);
+			pEntry->m_stagingStatus = CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_UNSTAGED;
+		}
+	}
 	SetCheck(listboxIndex, bCheck);
 }
 
@@ -3987,13 +4108,13 @@ void CGitStatusListCtrl::NotifyCheck()
 	}
 }
 
-int CGitStatusListCtrl::UpdateFileList(const CTGitPathList* list)
+int CGitStatusListCtrl::UpdateFileList(const CTGitPathList* list, bool getStagingStatus)
 {
 	CAutoWriteLock locker(m_guard);
 	m_CurrentVersion.Empty();
 
 	ATLASSERT(!(m_amend && !m_bIncludedStaged)); // just a safeguard that we always show all files if we want to amend (amending should only be the used from commitdlg)
-	g_Git.GetWorkingTreeChanges(m_StatusFileList, m_amend, list, m_bIncludedStaged);
+	g_Git.GetWorkingTreeChanges(m_StatusFileList, m_amend, list, m_bIncludedStaged, getStagingStatus);
 
 	BOOL bDeleteChecked = FALSE;
 	int deleteFromIndex = 0;
@@ -4147,7 +4268,7 @@ int CGitStatusListCtrl::UpdateLocalChangesIgnoredFileList(const CTGitPathList* l
 	return 0;
 }
 
-int CGitStatusListCtrl::UpdateFileList(int mask, bool once, const CTGitPathList* pList)
+int CGitStatusListCtrl::UpdateFileList(int mask, bool once, const CTGitPathList* pList, bool getStagingStatus)
 {
 	CAutoWriteLock locker(m_guard);
 	auto List = (pList && pList->GetCount() >= 1 && !(*pList)[0].GetWinPathString().IsEmpty()) ? pList : nullptr;
@@ -4155,7 +4276,7 @@ int CGitStatusListCtrl::UpdateFileList(int mask, bool once, const CTGitPathList*
 	{
 		if(once || (!(m_FileLoaded&CGitStatusListCtrl::FILELIST_MODIFY)))
 		{
-			UpdateFileList(List);
+			UpdateFileList(List, getStagingStatus);
 			m_FileLoaded|=CGitStatusListCtrl::FILELIST_MODIFY;
 		}
 	}

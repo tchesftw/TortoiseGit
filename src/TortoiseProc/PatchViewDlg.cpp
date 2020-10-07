@@ -25,10 +25,15 @@
 #include "CommonAppUtils.h"
 #include "StringUtils.h"
 #include "DPIAware.h"
+#include "StagingOperations.h"
+#include "Git.h"
+#include "EnableStagingTypeDefines.h"
 
 #pragma comment(lib, "Dwmapi.lib")
 
 // CPatchViewDlg dialog
+
+UINT CPatchViewDlg::WM_PARTIALSTAGINGREFRESHPATCHVIEW = RegisterWindowMessage(L"TORTOISEGIT_COMMIT_PARTIALSTAGINGREFRESHPATCHVIEW"); // same string in CommitDlg.cpp!!!
 
 IMPLEMENT_DYNAMIC(CPatchViewDlg, CStandAloneDialog)
 
@@ -40,6 +45,11 @@ CPatchViewDlg::CPatchViewDlg(CWnd* pParent /*=nullptr*/)
 	, m_hAccel(nullptr)
 	, m_bShowFindBar(false)
 	, m_nPopupSave(0)
+	, m_nStageHunks(0)
+	, m_nStageLines(0)
+	, m_nUnstageHunks(0)
+	, m_nUnstageLines(0)
+	, m_nEnableStagingType(ENABLE_STAGING_TYPE_NONE)
 {
 }
 
@@ -62,6 +72,11 @@ BEGIN_MESSAGE_MAP(CPatchViewDlg, CStandAloneDialog)
 	ON_COMMAND(IDM_FINDEXIT, OnEscape)
 	ON_COMMAND(IDM_FINDNEXT, OnFindNext)
 	ON_COMMAND(IDM_FINDPREV, OnFindPrev)
+	ON_COMMAND(IDM_FINDPREV, OnFindPrev)
+	ON_COMMAND(ID_STAGING_STAGESELECTEDLINES, OnStageLines)
+	ON_COMMAND(ID_STAGING_STAGESELECTEDHUNKS, OnStageHunks)
+	ON_COMMAND(ID_UNSTAGING_UNSTAGESELECTEDLINES, OnUnstageLines)
+	ON_COMMAND(ID_UNSTAGING_UNSTAGESELECTEDHUNKS, OnUnstageHunks)
 	ON_REGISTERED_MESSAGE(CFindBar::WM_FINDEXIT, OnFindExitMessage)
 	ON_REGISTERED_MESSAGE(CFindBar::WM_FINDNEXT, OnFindNextMessage)
 	ON_REGISTERED_MESSAGE(CFindBar::WM_FINDPREV, OnFindPrevMessage)
@@ -93,6 +108,26 @@ BOOL CPatchViewDlg::OnInitDialog()
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// EXCEPTION: OCX Property Pages should return FALSE
+}
+
+// This is intended to be called by the commit window when staging support is enabled there and
+// we were invoked becaused the user clicked on "Partial Staging>>" or "Partial Unstaging>>".
+// We assume the commit window will later on pass us the output of "git diff" (for staging) or
+// "git diff --cached" (for unstaging), of one file only.
+// If we were invoked from somewhere else (e.g. the File Diff Dialog), this will never be called
+// and all staging menu items will stay disabled.
+void CPatchViewDlg::EnableStaging(int enableStagingType)
+{
+	EnableMenuItem(GetMenu()->GetSafeHmenu(), ID_STAGING_STAGESELECTEDHUNKS,
+				   enableStagingType == ENABLE_STAGING_TYPE_STAGING ? MF_ENABLED : MF_DISABLED);
+	EnableMenuItem(GetMenu()->GetSafeHmenu(), ID_STAGING_STAGESELECTEDLINES,
+				   enableStagingType == ENABLE_STAGING_TYPE_STAGING ? MF_ENABLED : MF_DISABLED);
+	EnableMenuItem(GetMenu()->GetSafeHmenu(), ID_UNSTAGING_UNSTAGESELECTEDHUNKS,
+				   enableStagingType == ENABLE_STAGING_TYPE_UNSTAGING ? MF_ENABLED : MF_DISABLED);
+	EnableMenuItem(GetMenu()->GetSafeHmenu(), ID_UNSTAGING_UNSTAGESELECTEDLINES,
+				   enableStagingType == ENABLE_STAGING_TYPE_UNSTAGING ? MF_ENABLED : MF_DISABLED);
+
+	m_nEnableStagingType = enableStagingType; // This will be used to determine which context menu items to show
 }
 
 void CPatchViewDlg::SetText(const CString& text)
@@ -367,6 +402,122 @@ LRESULT CPatchViewDlg::OnFindResetMessage(WPARAM, LPARAM)
 	return 0;
 }
 
+void CPatchViewDlg::OnStageHunks()
+{
+	StageOrUnstageSelectedLinesOrHunks(STAGING_TYPE_STAGE_HUNKS);
+}
+
+void CPatchViewDlg::OnStageLines()
+{
+	StageOrUnstageSelectedLinesOrHunks(STAGING_TYPE_STAGE_LINES);
+}
+
+void CPatchViewDlg::OnUnstageHunks()
+{
+	StageOrUnstageSelectedLinesOrHunks(STAGING_TYPE_UNSTAGE_HUNKS);
+}
+
+void CPatchViewDlg::OnUnstageLines()
+{
+	StageOrUnstageSelectedLinesOrHunks(STAGING_TYPE_UNSTAGE_LINES);
+}
+
+void CPatchViewDlg::LoadAllLines(CFileTextLinesFromScintilla* lines)
+{
+	int lineCount = m_ctrlPatchView.Call(SCI_GETLINECOUNT);
+	for (int i = 0; i < lineCount; i++)
+	{
+		auto line = GetFullLineByLineNumber(i);
+		int style = GetStyleAtLine(i);
+		lines->AddLine(line.get(), style);
+	}
+	lines->SetFirstLineNumberSelected(GetFirstLineNumberSelected());
+	lines->SetLastLineNumberSelected(GetLastLineNumberSelected());
+}
+
+int CPatchViewDlg::GetFirstLineNumberSelected()
+{
+	auto selstart = m_ctrlPatchView.Call(SCI_GETSELECTIONSTART);
+	return m_ctrlPatchView.Call(SCI_LINEFROMPOSITION, selstart);
+}
+
+int CPatchViewDlg::GetLastLineNumberSelected()
+{
+	auto selend = m_ctrlPatchView.Call(SCI_GETSELECTIONEND);
+	return m_ctrlPatchView.Call(SCI_LINEFROMPOSITION, selend);
+}
+
+// Assumes a whole line is styled the same
+int CPatchViewDlg::GetStyleAtLine(int line)
+{
+	auto linestartpos = m_ctrlPatchView.Call(SCI_POSITIONFROMLINE, line);
+	return m_ctrlPatchView.Call(SCI_GETSTYLEAT, linestartpos);
+}
+
+// Includes EOL characters
+std::unique_ptr<char[]> CPatchViewDlg::GetFullLineByLineNumber(int line)
+{
+	auto linelen = m_ctrlPatchView.Call(SCI_LINELENGTH, line); // includes EOL
+	auto textbuf = std::make_unique<char[]>(linelen + 1); // + 1 to fit the terminating NULL
+	m_ctrlPatchView.Call(SCI_GETLINE, line, reinterpret_cast<LPARAM>(textbuf.get()));
+	return textbuf;
+}
+
+void CPatchViewDlg::StageOrUnstageSelectedLinesOrHunks(int stagingType)
+{
+	CFileTextLinesFromScintilla lines;
+	LoadAllLines(&lines);
+	auto op = StagingOperations(&lines);
+	std::unique_ptr<char[]> strPatch;
+	if (stagingType == STAGING_TYPE_STAGE_LINES || stagingType == STAGING_TYPE_UNSTAGE_LINES)
+		strPatch = op.CreatePatchBufferToStageOrUnstageSelectedLines(stagingType);
+	else if (stagingType == STAGING_TYPE_STAGE_HUNKS || stagingType == STAGING_TYPE_UNSTAGE_HUNKS)
+		strPatch = op.CreatePatchBufferToStageOrUnstageSelectedHunks();
+	else
+		return; // this should never happen
+	if (!strPatch)
+	{
+		MessageBox(CString(MAKEINTRESOURCE(IDS_ERROR_PARTIALSTAGING)), L"TortoiseGit", MB_OK | MB_ICONERROR);
+		return;
+	}
+	
+	CString tempPatch = WritePatchBufferToTemporaryFile(&strPatch);
+	if (!tempPatch)
+		return;
+
+	CString cmd, out;
+	if (stagingType == STAGING_TYPE_STAGE_HUNKS || stagingType == STAGING_TYPE_STAGE_LINES)
+		cmd.Format(L"git.exe apply --cached \"%s\"", static_cast<LPCTSTR>(tempPatch));
+	else //if (stagingType == STAGING_TYPE_UNSTAGE_HUNKS || stagingType == STAGING_TYPE_UNSTAGE_LINES)
+		cmd.Format(L"git.exe apply --cached -R \"%s\"", static_cast<LPCTSTR>(tempPatch));
+	int ret = g_Git.Run(cmd, &out, CP_UTF8);
+	if (ret != 0)
+	{
+		MessageBox(out, L"TortoiseGit", MB_OK | MB_ICONERROR);
+		return;
+	}
+	m_ctrlPatchView.Call(SCI_SETSELECTIONSTART, 0);
+	m_ctrlPatchView.Call(SCI_SETSELECTIONEND, 0);
+	// Tell the commit window we partially staged a file and ask it to update ourselves with the updated diff
+	m_ParentDlg->GetPatchViewParentWnd()->SendMessage(WM_PARTIALSTAGINGREFRESHPATCHVIEW);
+}
+
+// Creates a temporary file and writes to it the given buffer.
+// Returns the path of the created file.
+CString CPatchViewDlg::WritePatchBufferToTemporaryFile(const std::unique_ptr<char[]>* data)
+{
+	CString tempFile = ::GetTempFile();
+	FILE* fp = nullptr;
+	_wfopen_s(&fp, tempFile, L"w+b");
+	if (!fp)
+		return nullptr;
+
+	fwrite(data->get(), sizeof(char), ::strlen(data->get()), fp);
+	fclose(fp);
+
+	return tempFile;
+}
+
 void CPatchViewDlg::OnDestroy()
 {
 	__super::OnDestroy();
@@ -383,6 +534,27 @@ void CPatchViewDlg::InsertMenuItems(CMenu& mPopup, int& nCmd)
 	sMenuItemText.LoadString(IDS_REPOBROWSE_SAVEAS);
 	m_nPopupSave = nCmd++;
 	mPopup.AppendMenu(MF_STRING | MF_ENABLED, m_nPopupSave, sMenuItemText);
+	// We need to reset those to 0:
+	m_nStageHunks = 0;
+	m_nStageLines = 0;
+	m_nUnstageHunks = 0;
+	m_nUnstageLines = 0;
+	if (m_nEnableStagingType == ENABLE_STAGING_TYPE_STAGING)
+	{
+		m_nStageHunks = nCmd++;
+		mPopup.AppendMenu(MF_STRING | MF_ENABLED, m_nStageHunks, _T("Stage selected &hunks"));
+		
+		m_nStageLines = nCmd++;
+		mPopup.AppendMenu(MF_STRING | MF_ENABLED, m_nStageLines, _T("Stage selected &lines"));
+	}
+	if (m_nEnableStagingType == ENABLE_STAGING_TYPE_UNSTAGING)
+	{
+		m_nUnstageHunks = nCmd++;
+		mPopup.AppendMenu(MF_STRING | MF_ENABLED, m_nUnstageHunks, _T("Unstage selected &hunks"));
+
+		m_nUnstageLines = nCmd++;
+		mPopup.AppendMenu(MF_STRING | MF_ENABLED, m_nUnstageLines, _T("Unstage selected &lines"));
+	}
 }
 
 bool CPatchViewDlg::HandleMenuItemClick(int cmd, CSciEdit*)
@@ -392,6 +564,26 @@ bool CPatchViewDlg::HandleMenuItemClick(int cmd, CSciEdit*)
 		CString filename;
 		if (CCommonAppUtils::FileOpenSave(filename, nullptr, 0, IDS_PATCHFILEFILTER, false, GetSafeHwnd(), L"diff"))
 			CStringUtils::WriteStringToTextFile(filename, m_ctrlPatchView.GetText());
+		return true;
+	}
+	else if (cmd == m_nStageHunks)
+	{
+		OnStageHunks();
+		return true;
+	}
+	else if (cmd == m_nStageLines)
+	{
+		OnStageLines();
+		return true;
+	}
+	else if (cmd == m_nUnstageHunks)
+	{
+		OnUnstageHunks();
+		return true;
+	}
+	else if (cmd == m_nUnstageLines)
+	{
+		OnUnstageLines();
 		return true;
 	}
 	return false;
