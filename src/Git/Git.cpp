@@ -1263,9 +1263,9 @@ int CGit::GetHash(CGitHash &hash, const CString& friendname)
 	}
 }
 
-int CGit::GetInitAddList(CTGitPathList &outputlist)
+int CGit::GetInitAddList(CTGitPathList& outputlist, bool getStagingStatus)
 {
-	BYTE_VECTOR cmdout;
+	BYTE_VECTOR cmdout, cmdunstagedout;
 
 	outputlist.Clear();
 	if (Run(L"git.exe ls-files -s -t -z", &cmdout))
@@ -1276,6 +1276,23 @@ int CGit::GetInitAddList(CTGitPathList &outputlist)
 	for(int i = 0; i < outputlist.GetCount(); ++i)
 		const_cast<CTGitPath&>(outputlist[i]).m_Action = CTGitPath::LOGACTIONS_ADDED;
 
+	if (getStagingStatus)
+	{
+		for (int i = 0; i < outputlist.GetCount(); ++i)
+			const_cast<CTGitPath&>(outputlist[i]).m_stagingStatus = CTGitPath::STAGING_STATUS_TOTALLY_STAGED;
+		if (Run(L"git.exe diff-files --raw --numstat -C -M -z --", &cmdunstagedout))
+			return -1;
+		CTGitPathList unstaged;
+		unstaged.ParserFromLog(cmdunstagedout);
+
+		// File shows up both in the output of ls-files and diff-files: partially staged (typically modified after being added)
+		for (int j = 0; j < unstaged.GetCount(); ++j)
+		{
+			CString path = unstaged[j].GetGitPathString();
+			if (outputlist.LookForGitPath(path))
+				outputlist.UpdateStagingStatusFromPath(path, CTGitPath::STAGING_STATUS_PARTIALLY_STAGED); // FIXME: This is inefficient
+		}
+	}
 	return 0;
 }
 int CGit::GetCommitDiffList(const CString &rev1, const CString &rev2, CTGitPathList &outputlist, bool ignoreSpaceAtEol, bool ignoreSpaceChange, bool ignoreAllSpace , bool ignoreBlankLines)
@@ -3240,7 +3257,7 @@ bool CGit::LoadTextFile(const CString &filename, CString &msg)
 int CGit::GetWorkingTreeChanges(CTGitPathList& result, bool amend, const CTGitPathList* filterlist, bool includedStaged /* = false */, bool getStagingStatus /* = false */)
 {
 	if (IsInitRepos())
-		return GetInitAddList(result);
+		return GetInitAddList(result, getStagingStatus);
 
 	BYTE_VECTOR out;
 
