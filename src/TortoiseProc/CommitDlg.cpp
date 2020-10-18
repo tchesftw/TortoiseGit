@@ -2732,9 +2732,9 @@ void CCommitDlg::OnBnClickedWholeProject()
 	if (!m_bBlock)
 	{
 		if (m_bWholeProject || m_bWholeProject2)
-			m_ListCtrl.GetStatus(nullptr, true, false, true);
+			m_ListCtrl.GetStatus(nullptr, true, false, true, false, false, m_bStagingSupport);
 		else
-			m_ListCtrl.GetStatus(&this->m_pathList,true,false,true);
+			m_ListCtrl.GetStatus(&this->m_pathList, true, false, true, false, false, m_bStagingSupport);
 
 		m_regShowWholeProject = m_bWholeProject;
 
