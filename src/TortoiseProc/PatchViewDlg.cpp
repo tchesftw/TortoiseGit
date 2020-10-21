@@ -422,19 +422,6 @@ void CPatchViewDlg::OnUnstageLines()
 	StageOrUnstageSelectedLinesOrHunks(STAGING_TYPE_UNSTAGE_LINES);
 }
 
-void CPatchViewDlg::LoadAllLines(CFileTextLinesFromScintilla* lines)
-{
-	int lineCount = m_ctrlPatchView.Call(SCI_GETLINECOUNT);
-	for (int i = 0; i < lineCount; i++)
-	{
-		auto line = GetFullLineByLineNumber(i);
-		int style = GetStyleAtLine(i);
-		lines->AddLine(line.get(), style);
-	}
-	lines->SetFirstLineNumberSelected(GetFirstLineNumberSelected());
-	lines->SetLastLineNumberSelected(GetLastLineNumberSelected());
-}
-
 int CPatchViewDlg::GetFirstLineNumberSelected()
 {
 	auto selstart = m_ctrlPatchView.Call(SCI_GETSELECTIONSTART);
@@ -445,13 +432,6 @@ int CPatchViewDlg::GetLastLineNumberSelected()
 {
 	auto selend = m_ctrlPatchView.Call(SCI_GETSELECTIONEND);
 	return m_ctrlPatchView.Call(SCI_LINEFROMPOSITION, selend);
-}
-
-// Assumes a whole line is styled the same
-int CPatchViewDlg::GetStyleAtLine(int line)
-{
-	auto linestartpos = m_ctrlPatchView.Call(SCI_POSITIONFROMLINE, line);
-	return m_ctrlPatchView.Call(SCI_GETSTYLEAT, linestartpos);
 }
 
 // Includes EOL characters
@@ -465,8 +445,13 @@ std::unique_ptr<char[]> CPatchViewDlg::GetFullLineByLineNumber(int line)
 
 void CPatchViewDlg::StageOrUnstageSelectedLinesOrHunks(int stagingType)
 {
-	CFileTextLinesFromScintilla lines;
-	LoadAllLines(&lines);
+	UINT documentLength = m_ctrlPatchView.Call(SCI_GETLENGTH);
+	auto wholePatchBuf = std::make_unique<char[]>(documentLength + 1);
+	m_ctrlPatchView.Call(SCI_GETTEXT, documentLength + 1, reinterpret_cast<LPARAM>(wholePatchBuf.get()));
+
+	int lineCount = m_ctrlPatchView.Call(SCI_GETLINECOUNT);
+
+	CDiffLinesForStaging lines(wholePatchBuf, lineCount, GetFirstLineNumberSelected(), GetLastLineNumberSelected());
 	auto op = StagingOperations(&lines);
 	std::unique_ptr<char[]> strPatch;
 	if (stagingType == STAGING_TYPE_STAGE_LINES || stagingType == STAGING_TYPE_UNSTAGE_LINES)

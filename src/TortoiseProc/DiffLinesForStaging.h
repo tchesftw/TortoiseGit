@@ -20,42 +20,51 @@
 #pragma once
 #include "stdafx.h"
 
-struct CFileTextLineFromScintilla
+enum class DiffLineTypes
 {
-	CFileTextLineFromScintilla() {}
+	ADDED,
+	COMMAND,
+	COMMENT,
+	DEFAULT,
+	DELETED,
+	HEADER,
+	NO_NEWLINE_OLDFILE, // "\ No newline at end of file"
+	NO_NEWLINE_NEWFILE,
+	NO_NEWLINE_BOTHFILES,
+	POSITION
+};
 
-	CFileTextLineFromScintilla(const char* line, int size, int style, bool isNoNewlineComment)
+struct DiffLineForStaging
+{
+	DiffLineForStaging() {}
+
+	DiffLineForStaging(const char* line, int size, DiffLineTypes type)
 	{
 		sLine = std::make_unique<char[]>(size + 1);
 		strcpy_s(sLine.get(), size + 1, line);
 		this->size = size;
-		this->style = style;
-		this->isNoNewlineComment = isNoNewlineComment;
+		this->type = type;
 	}
 
 	std::unique_ptr<char[]> sLine; // Includes EOL, null-terminated
 	int size; // In bytes, without terminating null
-	int style; // Style of the first character, as was given by Scintilla's lexer (assumes the whole line is styled the same)
-	bool isNoNewlineComment; // Does this line look like a "\ No newline at end of file"?
+	DiffLineTypes type;
 };
 
-// Stores a copy of a patch loaded in Patch View Dialog, as a vector of lines (which also stores the style of each line).
-// Also stores information about the selection made by the user. Handles line and style retrieval.
+// Stores a copy of a patch loaded in Patch View Dialog, as a vector of lines (which also stores the type of each line).
+// Also stores information about the selection made by the user. Handles line text and line type retrieval.
 // Intended usage:
 // When the user invokes the partial staging/unstaging functionality in the Patch View Dialog, it creates an instance
-// of this class, calls AddLine for each line in the patch, calls SetFirstLineNumberSelected and SetLastLineNumberSelected,
-// then pass the instance to StagingOperations, which will handle the staging/unstaging operations.
-class CFileTextLinesFromScintilla
+// of this class and then pass the instance to StagingOperations, which will handle the staging/unstaging operations.
+class CDiffLinesForStaging
 {
 private:
-	std::vector<CFileTextLineFromScintilla> m_linevec;
+	std::vector<DiffLineForStaging> m_linevec;
 	int m_firstLineSelected;
 	int m_lastLineSelected;
 
 public:
-	void AddLine(const char* lineWithEOL, int style);
-	void SetFirstLineNumberSelected(int line);
-	void SetLastLineNumberSelected(int line);
+	CDiffLinesForStaging(const std::unique_ptr<char[]>& text, int numLines, int firstLineSelected, int lastLineSelected);
 
 	int GetFirstLineNumberSelected() const;
 	int GetLastLineNumberSelected() const;
@@ -63,7 +72,14 @@ public:
 	std::unique_ptr<char[]> GetFullTextOfSelectedLines() const;
 	std::unique_ptr<char[]> GetFullTextOfLineRange(int startline, int endline) const;
 	int GetLastDocumentLine() const;
-	int GetStyleAtLine(int line) const;
+	DiffLineTypes GetLineType(int line) const;
 	bool IsNoNewlineComment(int line) const;
 	int GetDocumentLength() const;
+
+	static bool GetOldAndNewLinesCountFromHunk(const std::unique_ptr<char[]>* strHunkStart, int* oldCount, int* newCount);
+
+#ifdef GTEST_INCLUDE_GTEST_GTEST_H_
+public:
+	const auto& GetLineVec() const { return m_linevec; };
+#endif
 };

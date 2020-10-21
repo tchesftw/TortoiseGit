@@ -19,7 +19,7 @@
 //
 #pragma once
 #include "stdafx.h"
-#include "FileTextLinesFromScintilla.h"
+#include "DiffLinesForStaging.h"
 #define STAGING_TYPE_STAGE_LINES 0
 #define STAGING_TYPE_STAGE_HUNKS 1
 #define STAGING_TYPE_UNSTAGE_LINES 2
@@ -28,7 +28,7 @@
 class StagingOperations
 {
 public:
-	StagingOperations(const CFileTextLinesFromScintilla* lines)
+	StagingOperations(const CDiffLinesForStaging* lines)
 	{
 		m_lines = lines;
 	}
@@ -36,15 +36,19 @@ public:
 	std::unique_ptr<char[]> CreatePatchBufferToStageOrUnstageSelectedLines(int stagingType) const;
 
 private:
-	const CFileTextLinesFromScintilla* m_lines;
+	const CDiffLinesForStaging* m_lines;
 	bool IsWithinFileHeader(int line) const;
 	int FindHunkStartBackwardsFrom(int line, int topBoundaryLine) const;
 	int FindHunkStartForwardsFrom(int line, int bottomBoundaryLine) const;
 	int FindHunkEndForwardsFrom(int line, int topBoundaryLine) const;
 	int FindHunkEndGivenHunkStartAndCounts(int hunkStart, int oldCount, int newCount) const;
 	std::unique_ptr<char[]> FindFileHeaderBackwardsFrom(int line) const;
-	bool GetOldAndNewLinesCountFromHunk(const std::unique_ptr<char[]>* strHunkStart, int* oldCount, int* newCount) const;
-	std::unique_ptr<char[]> ChangeOldAndNewLinesCount(std::unique_ptr<char[]>* strHunkStart, int oldCount, int newCount) const;
+#ifdef GTEST_INCLUDE_GTEST_GTEST_H_
+public:
+#endif
+	std::unique_ptr<char[]> ChangeOldAndNewLinesCount(const std::unique_ptr<char[]>* strHunkStart, int oldCount, int newCount) const;
+
+private:
 	bool ParseHunkOnEitherSelectionBoundary(std::unique_ptr<char[]>* hunkWithoutStartLine, int hunkWithoutStartLineLen,
 											int hunkStartLine, int hunkLastLine,
 											int firstLineSelected, int lastLineSelected,

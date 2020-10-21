@@ -136,7 +136,7 @@
     <ClCompile Include="Commands\LFSCommands.cpp" />
     <ClCompile Include="CommitIsOnRefsDlg.cpp" />
     <ClCompile Include="CreateChangelistDlg.cpp" />
-    <ClCompile Include="FileTextLinesFromScintilla.cpp" />
+    <ClCompile Include="DiffLinesForStaging.cpp" />
     <ClCompile Include="FilterHelper.cpp" />
     <ClCompile Include="FindBar.cpp" />
     <ClCompile Include="FirstStartWizard.cpp" />
@@ -446,7 +446,7 @@
     <ClInclude Include="ConfigureGitExe.h" />
     <ClInclude Include="CreateChangelistDlg.h" />
     <ClInclude Include="EnableStagingTypeDefines.h" />
-    <ClInclude Include="FileTextLinesFromScintilla.h" />
+    <ClInclude Include="DiffLinesForStaging.h" />
     <ClInclude Include="FilterHelper.h" />
     <ClInclude Include="FindBar.h" />
     <ClInclude Include="FirstStartWizard.h" />

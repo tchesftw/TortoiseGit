@@ -19,16 +19,14 @@
 //
 #include <stdafx.h>
 #include "StagingOperations.h"
-#include <Scintilla.h>
-#include <SciLexer.h>
 #include <regex>
 
 bool StagingOperations::IsWithinFileHeader(int line) const
 {
-	int style = m_lines->GetStyleAtLine(line);
+	DiffLineTypes type = m_lines->GetLineType(line);
 	if (m_lines->IsNoNewlineComment(line))
 		return false;
-	return (style == SCE_DIFF_COMMAND || style == SCE_DIFF_COMMENT || style == SCE_DIFF_HEADER);
+	return (type == DiffLineTypes::COMMAND || type == DiffLineTypes::COMMENT || type == DiffLineTypes::HEADER);
 }
 
 // From (and including) given line, looks backwards for a hunk start line (@@xxxxxxxx@@),
@@ -38,7 +36,7 @@ int StagingOperations::FindHunkStartBackwardsFrom(int line, int topBoundaryLine)
 	int i = line;
 	for (; i >= topBoundaryLine; i--)
 	{
-		if (m_lines->GetStyleAtLine(i) == SCE_DIFF_POSITION)
+		if (m_lines->GetLineType(i) == DiffLineTypes::POSITION)
 			return i;
 	}
 	return -1;
@@ -51,7 +49,7 @@ int StagingOperations::FindHunkStartForwardsFrom(int line, int bottomBoundaryLin
 	int i = line;
 	for (; i <= bottomBoundaryLine; i++)
 	{
-		if (m_lines->GetStyleAtLine(i) == SCE_DIFF_POSITION)
+		if (m_lines->GetLineType(i) == DiffLineTypes::POSITION)
 			return i;
 	}
 	return -1;
@@ -70,7 +68,7 @@ int StagingOperations::FindHunkEndForwardsFrom(int line, int topBoundaryLine) co
 	auto strHunkStart = m_lines->GetFullLineByLineNumber(hunkStart);
 
 	int oldCount, newCount;
-	if (!GetOldAndNewLinesCountFromHunk(&strHunkStart, &oldCount, &newCount))
+	if (!CDiffLinesForStaging::GetOldAndNewLinesCountFromHunk(&strHunkStart, &oldCount, &newCount))
 		return -1;
 
 	return FindHunkEndGivenHunkStartAndCounts(hunkStart, oldCount, newCount);
@@ -90,12 +88,12 @@ int StagingOperations::FindHunkEndGivenHunkStartAndCounts(int hunkStart, int old
 	int i = hunkStart + 1;
 	for (; i <= lastDocumentLine; i++)
 	{
-		int style = m_lines->GetStyleAtLine(i);
-		if (style == SCE_DIFF_DELETED)
+		DiffLineTypes type = m_lines->GetLineType(i);
+		if (type == DiffLineTypes::DELETED)
 			oldCount--;
-		else if (style == SCE_DIFF_ADDED)
+		else if (type == DiffLineTypes::ADDED)
 			newCount--;
-		else if (style == SCE_DIFF_DEFAULT)
+		else if (type == DiffLineTypes::DEFAULT)
 		{
 			oldCount--;
 			newCount--;
@@ -121,8 +119,8 @@ std::unique_ptr<char[]> StagingOperations::FindFileHeaderBackwardsFrom(int line)
 	int i = line;
 	for (; i > -1; i--)
 	{
-		int style = m_lines->GetStyleAtLine(i);
-		if (style != SCE_DIFF_POSITION && style != SCE_DIFF_DEFAULT && style != SCE_DIFF_ADDED && style != SCE_DIFF_DELETED
+		DiffLineTypes type = m_lines->GetLineType(i);
+		if (type != DiffLineTypes::POSITION && type != DiffLineTypes::DEFAULT && type != DiffLineTypes::ADDED && type != DiffLineTypes::DELETED
 			&& !m_lines->IsNoNewlineComment(i))
 			break;
 	}
@@ -131,7 +129,7 @@ std::unique_ptr<char[]> StagingOperations::FindFileHeaderBackwardsFrom(int line)
 	int fileHeaderLastLine = i;
 	for (; i > -1; i--)
 	{
-		if (m_lines->GetStyleAtLine(i) == SCE_DIFF_COMMAND)
+		if (m_lines->GetLineType(i) == DiffLineTypes::COMMAND)
 			break;
 	}
 	if (i == -1)
@@ -202,7 +200,7 @@ std::unique_ptr<char[]> StagingOperations::CreatePatchBufferToStageOrUnstageSele
 
 	auto strFirstHunkStartLine = m_lines->GetFullLineByLineNumber(firstHunkStartLine);
 	int firstHunkOldCount, firstHunkNewCount;
-	if (!GetOldAndNewLinesCountFromHunk(&strFirstHunkStartLine, &firstHunkOldCount, &firstHunkNewCount))
+	if (!CDiffLinesForStaging::GetOldAndNewLinesCountFromHunk(&strFirstHunkStartLine, &firstHunkOldCount, &firstHunkNewCount))
 		return nullptr;
 	int firstHunkLastLine = FindHunkEndGivenHunkStartAndCounts(firstHunkStartLine, firstHunkOldCount, firstHunkNewCount);
 	if (firstHunkLastLine == -1)
@@ -254,7 +252,7 @@ std::unique_ptr<char[]> StagingOperations::CreatePatchBufferToStageOrUnstageSele
 
 	auto strLastHunkStartLine = m_lines->GetFullLineByLineNumber(lastHunkStartLine);
 	int lastHunkOldCount, lastHunkNewCount;
-	if (!GetOldAndNewLinesCountFromHunk(&strLastHunkStartLine, &lastHunkOldCount, &lastHunkNewCount))
+	if (!CDiffLinesForStaging::GetOldAndNewLinesCountFromHunk(&strLastHunkStartLine, &lastHunkOldCount, &lastHunkNewCount))
 		return nullptr;
 
 	bool includeLastHunkAtAll = ParseHunkOnEitherSelectionBoundary(&lastHunkWithoutStartLine,
@@ -279,27 +277,8 @@ std::unique_ptr<char[]> StagingOperations::CreatePatchBufferToStageOrUnstageSele
 }
 
 // Takes a pointer to a buffer containing the first line of a hunk (@@xxxxxx@@)
-// Parses it to extract its old lines count and new lines count and passes them back to the given oldCount and newCount.
-// Returns true if the line matches the expected format, false otherwise (what should never happen, except in the
-// case of a single-line diff, which does not matter here, since the user can just stage/unstage the whole file).
-bool StagingOperations::GetOldAndNewLinesCountFromHunk(const std::unique_ptr<char[]>* strHunkStart,
-													   int* oldCount, int* newCount) const
-{
-	std::string pattern = "^@@ -\\d+?,(\\d+?) \\+\\d+?,(\\d+?) @@";
-	std::regex rx(pattern, std::regex_constants::ECMAScript);
-	std::smatch match;
-
-	std::string rmatch = std::string(static_cast<LPCSTR>(strHunkStart->get()));
-	if ((!std::regex_search(rmatch, match, rx)) || match.size() != 3) // this should never happen
-		return false;
-	*oldCount = StrToIntA(match[1].str().c_str());
-	*newCount = StrToIntA(match[2].str().c_str());
-	return true;
-}
-
-// Takes a pointer to a buffer containing the first line of a hunk (@@xxxxxx@@)
-// Modifies the given buffer to change the old lines count and new lines count to the given ones.
-std::unique_ptr<char[]> StagingOperations::ChangeOldAndNewLinesCount(std::unique_ptr<char[]>* strHunkStart,
+// Returns a new buffer with its old lines count and new lines count changed to the given ones.
+std::unique_ptr<char[]> StagingOperations::ChangeOldAndNewLinesCount(const std::unique_ptr<char[]>* strHunkStart,
 																	 int oldCount, int newCount) const
 {
 	std::string pattern = "^@@ -(\\d+?),(\\d+?) \\+(\\d+?),(\\d+?) @@";
@@ -337,50 +316,59 @@ bool StagingOperations::ParseHunkOnEitherSelectionBoundary(std::unique_ptr<char[
 	bool includeHunkAtAll = false;
 	for (int i = hunkStartLine + 1; i <= hunkLastLine; i++)
 	{
-		int style = m_lines->GetStyleAtLine(i);
+		DiffLineTypes type = m_lines->GetLineType(i);
 		auto strLine = m_lines->GetFullLineByLineNumber(i);
-		// TODO: In some situations, this will include in the temporary patch a "no newline" line which shouldn't be included
-		if (style == SCE_DIFF_DEFAULT || m_lines->IsNoNewlineComment(i))
+		if (type == DiffLineTypes::DEFAULT || type == DiffLineTypes::NO_NEWLINE_BOTHFILES)
 			strcat_s(hunkWithoutStartLine->get(), hunkWithoutStartLineLen, strLine.get());
-		else if (style == SCE_DIFF_ADDED)
+		else if (type == DiffLineTypes::ADDED || type == DiffLineTypes::NO_NEWLINE_NEWFILE)
 		{
 			if (i < firstLineSelected || i > lastLineSelected) // outside the user selection
 			{
 				if (stagingType == STAGING_TYPE_STAGE_LINES)
 				{
-					(*newCount)--;
+					if (type == DiffLineTypes::ADDED) // hunk counts do not consider "\ No newline at end of file"
+						(*newCount)--;
 				}
 				else if (stagingType == STAGING_TYPE_UNSTAGE_LINES)
 				{
-					strLine.get()[0] = ' '; // Turn it into a context line
-					(*oldCount)++;
+					if (type == DiffLineTypes::ADDED) // hunk counts do not consider "\ No newline at end of file"
+					{
+						strLine.get()[0] = ' '; // Turn it into a context line
+						(*oldCount)++;
+					}
 					strcat_s(hunkWithoutStartLine->get(), hunkWithoutStartLineLen, strLine.get());
 				}
 			}
 			else
 			{
-				includeHunkAtAll = true;
+				if (type == DiffLineTypes::ADDED)
+					includeHunkAtAll = true;
 				strcat_s(hunkWithoutStartLine->get(), hunkWithoutStartLineLen, strLine.get());
 			}
 		}
-		else if (style == SCE_DIFF_DELETED)
+		else if (type == DiffLineTypes::DELETED || type == DiffLineTypes::NO_NEWLINE_OLDFILE)
 		{
 			if (i < firstLineSelected || i > lastLineSelected) // outside the user selection
 			{
 				if (stagingType == STAGING_TYPE_STAGE_LINES)
 				{
-					strLine.get()[0] = ' '; // Turn it into a context line
-					(*newCount)++;
+					if (type == DiffLineTypes::DELETED) // hunk counts do not consider "\ No newline at end of file"
+					{
+						strLine.get()[0] = ' '; // Turn it into a context line
+						(*newCount)++;
+					}
 					strcat_s(hunkWithoutStartLine->get(), hunkWithoutStartLineLen, strLine.get());
 				}
 				else if (stagingType == STAGING_TYPE_UNSTAGE_LINES)
 				{
-					(*oldCount)--;
+					if (type == DiffLineTypes::DELETED) // hunk counts do not consider "\ No newline at end of file"
+						(*oldCount)--;
 				}
 			}
 			else
 			{
-				includeHunkAtAll = true;
+				if (type == DiffLineTypes::DELETED)
+					includeHunkAtAll = true;
 				strcat_s(hunkWithoutStartLine->get(), hunkWithoutStartLineLen, strLine.get());
 			}
 		}

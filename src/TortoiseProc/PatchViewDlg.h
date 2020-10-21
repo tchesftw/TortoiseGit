@@ -20,7 +20,7 @@
 #include "StandAloneDlg.h"
 #include "SciEdit.h"
 #include "FindBar.h"
-#include "FileTextLinesFromScintilla.h"
+#include "DiffLinesForStaging.h"
 
 class IHasPatchView
 {
@@ -97,10 +97,8 @@ protected:
 	int					m_nUnstageHunks;
 	int					m_nUnstageLines;
 
-	void LoadAllLines(CFileTextLinesFromScintilla* lines);
 	int GetFirstLineNumberSelected();
 	int GetLastLineNumberSelected();
-	int GetStyleAtLine(int line);
 	std::unique_ptr<char[]> GetFullLineByLineNumber(int line);
 	void StageOrUnstageSelectedLinesOrHunks(int stagingType);
 	CString WritePatchBufferToTemporaryFile(const std::unique_ptr<char[]>* data);
