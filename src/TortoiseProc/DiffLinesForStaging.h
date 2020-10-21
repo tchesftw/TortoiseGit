@@ -76,7 +76,7 @@ public:
 	bool IsNoNewlineComment(int line) const;
 	int GetDocumentLength() const;
 
-	static bool GetOldAndNewLinesCountFromHunk(const std::unique_ptr<char[]>* strHunkStart, int* oldCount, int* newCount);
+	static bool GetOldAndNewLinesCountFromHunk(const std::unique_ptr<char[]>* strHunkStart, int* oldCount, int* newCount, bool allowSingleLine = false);
 
 #ifdef GTEST_INCLUDE_GTEST_GTEST_H_
 public:

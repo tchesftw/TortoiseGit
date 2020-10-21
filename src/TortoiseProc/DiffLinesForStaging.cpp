@@ -85,7 +85,7 @@ CDiffLinesForStaging::CDiffLinesForStaging(const std::unique_ptr<char[]>& text, 
 			case 3:
 				if (strncmp(line.get(), "@@ ", 3) == 0)
 				{
-					if (GetOldAndNewLinesCountFromHunk(&line, &oldCount, &newCount)) // oldCount and newCount are not used here
+					if (GetOldAndNewLinesCountFromHunk(&line, &oldCount, &newCount, true)) // oldCount and newCount are not used here
 					{
 						type = DiffLineTypes::POSITION;
 						state = 4;
@@ -197,10 +197,11 @@ int CDiffLinesForStaging::GetDocumentLength() const
 // Takes a pointer to a buffer containing the first line of a hunk (@@xxxxxx@@)
 // Parses it to extract its old lines count and new lines count and passes them back to the given oldCount and newCount.
 // Returns true if the line matches the expected format, false otherwise (what should never happen).
+// If allowSingleLine is false, returns false for hunks missing the start line number in one or both sides (e.g. @@ -x +y,z @@)
 bool CDiffLinesForStaging::GetOldAndNewLinesCountFromHunk(const std::unique_ptr<char[]>* strHunkStart,
-																 int* oldCount, int* newCount)
+														  int* oldCount, int* newCount, bool allowSingleLine)
 {
-	std::string pattern = "^@@ -(?:\\d+?,)?(\\d+?) \\+(?:\\d+?,)?(\\d+?) @@";
+	std::string pattern = allowSingleLine ? "^@@ -(?:\\d+?,)?(\\d+?) \\+(?:\\d+?,)?(\\d+?) @@" : "^@@ -\\d+?,(\\d+?) \\+\\d+?,(\\d+?) @@";
 	std::regex rx(pattern, std::regex_constants::ECMAScript);
 	std::smatch match;
 
