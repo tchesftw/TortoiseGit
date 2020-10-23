@@ -185,21 +185,21 @@ inline void TestLineStagingNullptr(const std::unique_ptr<char[]>& buf, int numLi
 {
 	CDiffLinesForStaging lines(buf, numLines, firstLineSelected, lastLineSelected);
 	StagingOperations op(&lines);
-	EXPECT_EQ(op.CreatePatchBufferToStageOrUnstageSelectedLines(STAGING_TYPE_STAGE_LINES), nullptr);
+	EXPECT_EQ(op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::StageLines), nullptr);
 }
 
 inline void TestLineUnstagingNullptr(const std::unique_ptr<char[]>& buf, int numLines, int firstLineSelected, int lastLineSelected)
 {
 	CDiffLinesForStaging lines(buf, numLines, firstLineSelected, lastLineSelected);
 	StagingOperations op(&lines);
-	EXPECT_EQ(op.CreatePatchBufferToStageOrUnstageSelectedLines(STAGING_TYPE_UNSTAGE_LINES), nullptr);
+	EXPECT_EQ(op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::UnstageLines), nullptr);
 }
 
 inline void TestLineStagingException(const std::unique_ptr<char[]>& buf, int numLines, int firstLineSelected, int lastLineSelected)
 {
 	CDiffLinesForStaging lines(buf, numLines, firstLineSelected, lastLineSelected);
 	StagingOperations op(&lines);
-	EXPECT_ANY_THROW(op.CreatePatchBufferToStageOrUnstageSelectedLines(STAGING_TYPE_STAGE_LINES));
+	EXPECT_ANY_THROW(op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::StageLines));
 }
 
 // When the user selects lines in the partial staging window and invokes the partial staging functionality,
@@ -263,7 +263,7 @@ inline void ExpectPositionLineCountsChanged(const CDiffLinesForStaging& base, co
 {
 	EXPECT_EQ(temp.GetLineVec()[tempPositionLine].type, DiffLineTypes::POSITION);
 	StagingOperations op(&base);
-	auto changedbuf = op.ChangeOldAndNewLinesCount(&base.GetLineVec()[basePositionLine].sLine, new_oldCount, new_newCount);
+	auto changedbuf = op.ChangeOldAndNewLinesCount(base.GetLineVec()[basePositionLine].sLine, new_oldCount, new_newCount);
 	EXPECT_EQ(strcmp(changedbuf.get(), temp.GetLineVec()[tempPositionLine].sLine.get()), 0);
 }
 
@@ -321,7 +321,7 @@ TEST(StagingOperations, PatchBuffer)
 	// The first hunk with some of its modified lines selected
 	CDiffLinesForStaging base(buf, numLines, 7, 11); // user selected lines 8 to 12 and clicked line staging
 	StagingOperations op(&base);
-	auto tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(STAGING_TYPE_STAGE_LINES);
+	auto tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::StageLines);
 	CDiffLinesForStaging temp(tempbuf, 23, 0, 0); // the temporary patch should have 23 lines, 0 and 0 don't matter here
 	ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 15); // first 15 lines
 	ExpectOldLineTurnedIntoContext(base, temp, { {15,15},{19,18} });
@@ -330,7 +330,7 @@ TEST(StagingOperations, PatchBuffer)
 	// Two hunks at the end of the file, both with at least one - or + line selected
 	base = CDiffLinesForStaging(buf, numLines, 84, 99); // user selected lines 85 to 100 and clicked line staging
 	op = StagingOperations(&base);
-	tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(STAGING_TYPE_STAGE_LINES);
+	tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::StageLines);
 	temp = CDiffLinesForStaging(tempbuf, 29, 0, 0); // the temporary patch should have 29 lines, 0 and 0 don't matter here
 	ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 4); // first 4 lines (file header)
 	ExpectPositionLineCountsChanged(base, temp, 79, 4, 12, 13); // @@ -336,12 +334,12  ->  @@ -336,12 +334,13
@@ -344,7 +344,7 @@ TEST(StagingOperations, PatchBuffer)
 	// Four hunks. The two hunks at either end have no - or + lines selected and so must be discarded
 	base = CDiffLinesForStaging(buf, numLines, 30, 62); // user selected lines 31 to 63 and clicked line unstaging
 	op = StagingOperations(&base);
-	tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(STAGING_TYPE_UNSTAGE_LINES);
+	tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::UnstageLines);
 	temp = CDiffLinesForStaging(tempbuf, 31, 0, 0); // the temporary patch should have 31 lines, 0 and 0 don't matter here
 	ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 4); // first 4 lines (file header)
 	ExpectLineRangeIncludedAsIs(base, temp, 33, 4, 26);
@@ -353,7 +353,7 @@ TEST(StagingOperations, PatchBuffer)
 	// Two hunks with some of their modified lines selected
 	base = CDiffLinesForStaging(buf, numLines, 64, 74); // user selected lines 65 to 75 and clicked line unstaging
 	op = StagingOperations(&base);
-	tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(STAGING_TYPE_UNSTAGE_LINES);
+	tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::UnstageLines);
 	temp = CDiffLinesForStaging(tempbuf, 24, 0, 0); // the temporary patch should have 24 lines, 0 and 0 don't matter here
 	ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 4); // first 4 lines (file header)
 	ExpectPositionLineCountsChanged(base, temp, 59, 4, 7, 8); // @@ -122,8 +120,8  ->  @@ -122,7 +120,8 

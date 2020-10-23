@@ -27,7 +27,7 @@
 #include "DPIAware.h"
 #include "StagingOperations.h"
 #include "Git.h"
-#include "EnableStagingTypeDefines.h"
+#include "EnableStagingTypes.h"
 
 #pragma comment(lib, "Dwmapi.lib")
 
@@ -49,7 +49,7 @@ CPatchViewDlg::CPatchViewDlg(CWnd* pParent /*=nullptr*/)
 	, m_nStageLines(0)
 	, m_nUnstageHunks(0)
 	, m_nUnstageLines(0)
-	, m_nEnableStagingType(ENABLE_STAGING_TYPE_NONE)
+	, m_nEnableStagingType(EnableStagingTypes::None)
 {
 }
 
@@ -116,16 +116,16 @@ BOOL CPatchViewDlg::OnInitDialog()
 // "git diff --cached" (for unstaging), of one file only.
 // If we were invoked from somewhere else (e.g. the File Diff Dialog), this will never be called
 // and all staging menu items will stay disabled.
-void CPatchViewDlg::EnableStaging(int enableStagingType)
+void CPatchViewDlg::EnableStaging(EnableStagingTypes enableStagingType)
 {
 	EnableMenuItem(GetMenu()->GetSafeHmenu(), ID_STAGING_STAGESELECTEDHUNKS,
-				   enableStagingType == ENABLE_STAGING_TYPE_STAGING ? MF_ENABLED : MF_DISABLED);
+				   enableStagingType == EnableStagingTypes::Staging ? MF_ENABLED : MF_DISABLED);
 	EnableMenuItem(GetMenu()->GetSafeHmenu(), ID_STAGING_STAGESELECTEDLINES,
-				   enableStagingType == ENABLE_STAGING_TYPE_STAGING ? MF_ENABLED : MF_DISABLED);
+				   enableStagingType == EnableStagingTypes::Staging ? MF_ENABLED : MF_DISABLED);
 	EnableMenuItem(GetMenu()->GetSafeHmenu(), ID_UNSTAGING_UNSTAGESELECTEDHUNKS,
-				   enableStagingType == ENABLE_STAGING_TYPE_UNSTAGING ? MF_ENABLED : MF_DISABLED);
+				   enableStagingType == EnableStagingTypes::Unstaging ? MF_ENABLED : MF_DISABLED);
 	EnableMenuItem(GetMenu()->GetSafeHmenu(), ID_UNSTAGING_UNSTAGESELECTEDLINES,
-				   enableStagingType == ENABLE_STAGING_TYPE_UNSTAGING ? MF_ENABLED : MF_DISABLED);
+				   enableStagingType == EnableStagingTypes::Unstaging ? MF_ENABLED : MF_DISABLED);
 
 	m_nEnableStagingType = enableStagingType; // This will be used to determine which context menu items to show
 }
@@ -404,34 +404,34 @@ LRESULT CPatchViewDlg::OnFindResetMessage(WPARAM, LPARAM)
 
 void CPatchViewDlg::OnStageHunks()
 {
-	StageOrUnstageSelectedLinesOrHunks(STAGING_TYPE_STAGE_HUNKS);
+	StageOrUnstageSelectedLinesOrHunks(StagingType::StageHunks);
 }
 
 void CPatchViewDlg::OnStageLines()
 {
-	StageOrUnstageSelectedLinesOrHunks(STAGING_TYPE_STAGE_LINES);
+	StageOrUnstageSelectedLinesOrHunks(StagingType::StageLines);
 }
 
 void CPatchViewDlg::OnUnstageHunks()
 {
-	StageOrUnstageSelectedLinesOrHunks(STAGING_TYPE_UNSTAGE_HUNKS);
+	StageOrUnstageSelectedLinesOrHunks(StagingType::UnstageHunks);
 }
 
 void CPatchViewDlg::OnUnstageLines()
 {
-	StageOrUnstageSelectedLinesOrHunks(STAGING_TYPE_UNSTAGE_LINES);
+	StageOrUnstageSelectedLinesOrHunks(StagingType::UnstageLines);
 }
 
 int CPatchViewDlg::GetFirstLineNumberSelected()
 {
 	auto selstart = m_ctrlPatchView.Call(SCI_GETSELECTIONSTART);
-	return m_ctrlPatchView.Call(SCI_LINEFROMPOSITION, selstart);
+	return static_cast<int>(m_ctrlPatchView.Call(SCI_LINEFROMPOSITION, selstart));
 }
 
 int CPatchViewDlg::GetLastLineNumberSelected()
 {
 	auto selend = m_ctrlPatchView.Call(SCI_GETSELECTIONEND);
-	return m_ctrlPatchView.Call(SCI_LINEFROMPOSITION, selend);
+	return static_cast<int>(m_ctrlPatchView.Call(SCI_LINEFROMPOSITION, selend));
 }
 
 // Includes EOL characters
@@ -443,20 +443,20 @@ std::unique_ptr<char[]> CPatchViewDlg::GetFullLineByLineNumber(int line)
 	return textbuf;
 }
 
-void CPatchViewDlg::StageOrUnstageSelectedLinesOrHunks(int stagingType)
+void CPatchViewDlg::StageOrUnstageSelectedLinesOrHunks(StagingType stagingType)
 {
-	UINT documentLength = m_ctrlPatchView.Call(SCI_GETLENGTH);
+	UINT documentLength = static_cast<UINT>(m_ctrlPatchView.Call(SCI_GETLENGTH));
 	auto wholePatchBuf = std::make_unique<char[]>(documentLength + 1);
 	m_ctrlPatchView.Call(SCI_GETTEXT, documentLength + 1, reinterpret_cast<LPARAM>(wholePatchBuf.get()));
 
-	int lineCount = m_ctrlPatchView.Call(SCI_GETLINECOUNT);
+	int lineCount = static_cast<int>(m_ctrlPatchView.Call(SCI_GETLINECOUNT));
 
 	CDiffLinesForStaging lines(wholePatchBuf, lineCount, GetFirstLineNumberSelected(), GetLastLineNumberSelected());
 	auto op = StagingOperations(&lines);
 	std::unique_ptr<char[]> strPatch;
-	if (stagingType == STAGING_TYPE_STAGE_LINES || stagingType == STAGING_TYPE_UNSTAGE_LINES)
+	if (stagingType == StagingType::StageLines || stagingType == StagingType::UnstageLines)
 		strPatch = op.CreatePatchBufferToStageOrUnstageSelectedLines(stagingType);
-	else if (stagingType == STAGING_TYPE_STAGE_HUNKS || stagingType == STAGING_TYPE_UNSTAGE_HUNKS)
+	else if (stagingType == StagingType::StageHunks || stagingType == StagingType::UnstageHunks)
 		strPatch = op.CreatePatchBufferToStageOrUnstageSelectedHunks();
 	else
 		return; // this should never happen
@@ -466,14 +466,14 @@ void CPatchViewDlg::StageOrUnstageSelectedLinesOrHunks(int stagingType)
 		return;
 	}
 	
-	CString tempPatch = WritePatchBufferToTemporaryFile(&strPatch);
+	CString tempPatch = WritePatchBufferToTemporaryFile(strPatch);
 	if (!tempPatch)
 		return;
 
 	CString cmd, out;
-	if (stagingType == STAGING_TYPE_STAGE_HUNKS || stagingType == STAGING_TYPE_STAGE_LINES)
+	if (stagingType == StagingType::StageHunks || stagingType == StagingType::StageLines)
 		cmd.Format(L"git.exe apply --cached \"%s\"", static_cast<LPCTSTR>(tempPatch));
-	else //if (stagingType == STAGING_TYPE_UNSTAGE_HUNKS || stagingType == STAGING_TYPE_UNSTAGE_LINES)
+	else //if (stagingType == StagingType::UnstageHunks || stagingType == StagingType::UnstageLines)
 		cmd.Format(L"git.exe apply --cached -R \"%s\"", static_cast<LPCTSTR>(tempPatch));
 	int ret = g_Git.Run(cmd, &out, CP_UTF8);
 	if (ret != 0)
@@ -489,7 +489,7 @@ void CPatchViewDlg::StageOrUnstageSelectedLinesOrHunks(int stagingType)
 
 // Creates a temporary file and writes to it the given buffer.
 // Returns the path of the created file.
-CString CPatchViewDlg::WritePatchBufferToTemporaryFile(const std::unique_ptr<char[]>* data)
+CString CPatchViewDlg::WritePatchBufferToTemporaryFile(const std::unique_ptr<char[]>& data)
 {
 	CString tempFile = ::GetTempFile();
 	FILE* fp = nullptr;
@@ -497,7 +497,7 @@ CString CPatchViewDlg::WritePatchBufferToTemporaryFile(const std::unique_ptr<cha
 	if (!fp)
 		return nullptr;
 
-	fwrite(data->get(), sizeof(char), ::strlen(data->get()), fp);
+	fwrite(data.get(), sizeof(char), ::strlen(data.get()), fp);
 	fclose(fp);
 
 	return tempFile;
@@ -524,7 +524,7 @@ void CPatchViewDlg::InsertMenuItems(CMenu& mPopup, int& nCmd)
 	m_nStageLines = 0;
 	m_nUnstageHunks = 0;
 	m_nUnstageLines = 0;
-	if (m_nEnableStagingType == ENABLE_STAGING_TYPE_STAGING)
+	if (m_nEnableStagingType == EnableStagingTypes::Staging)
 	{
 		m_nStageHunks = nCmd++;
 		mPopup.AppendMenu(MF_STRING | MF_ENABLED, m_nStageHunks, _T("Stage selected &hunks"));
@@ -532,7 +532,7 @@ void CPatchViewDlg::InsertMenuItems(CMenu& mPopup, int& nCmd)
 		m_nStageLines = nCmd++;
 		mPopup.AppendMenu(MF_STRING | MF_ENABLED, m_nStageLines, _T("Stage selected &lines"));
 	}
-	if (m_nEnableStagingType == ENABLE_STAGING_TYPE_UNSTAGING)
+	if (m_nEnableStagingType == EnableStagingTypes::Unstaging)
 	{
 		m_nUnstageHunks = nCmd++;
 		mPopup.AppendMenu(MF_STRING | MF_ENABLED, m_nUnstageHunks, _T("Unstage selected &hunks"));

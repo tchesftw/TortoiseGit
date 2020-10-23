@@ -1945,7 +1945,7 @@
     <ClInclude Include="StagingOperations.h">
       <Filter>Commands\Commit</Filter>
     </ClInclude>
-    <ClInclude Include="EnableStagingTypeDefines.h">
+    <ClInclude Include="EnableStagingTypes.h">
       <Filter>Commands\Commit</Filter>
     </ClInclude>
     <ClInclude Include="DiffLinesForStaging.h">

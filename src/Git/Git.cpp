@@ -1279,7 +1279,7 @@ int CGit::GetInitAddList(CTGitPathList& outputlist, bool getStagingStatus)
 	if (getStagingStatus)
 	{
 		for (int i = 0; i < outputlist.GetCount(); ++i)
-			const_cast<CTGitPath&>(outputlist[i]).m_stagingStatus = CTGitPath::STAGING_STATUS_TOTALLY_STAGED;
+			const_cast<CTGitPath&>(outputlist[i]).m_stagingStatus = CTGitPath::StagingStatus::TotallyStaged;
 		if (Run(L"git.exe diff-files --raw --numstat -C -M -z --", &cmdunstagedout))
 			return -1;
 		CTGitPathList unstaged;
@@ -1290,7 +1290,7 @@ int CGit::GetInitAddList(CTGitPathList& outputlist, bool getStagingStatus)
 		{
 			CString path = unstaged[j].GetGitPathString();
 			if (outputlist.LookForGitPath(path))
-				outputlist.UpdateStagingStatusFromPath(path, CTGitPath::STAGING_STATUS_PARTIALLY_STAGED); // FIXME: This is inefficient
+				outputlist.UpdateStagingStatusFromPath(path, CTGitPath::StagingStatus::PartiallyStaged); // FIXME: This is inefficient
 		}
 	}
 	return 0;
@@ -3359,16 +3359,16 @@ int CGit::GetWorkingTreeChanges(CTGitPathList& result, bool amend, const CTGitPa
 			{
 				CString path = stagedUnfiltered[j].GetGitPathString();
 				if (unstagedUnfiltered.LookForGitPath(path))
-					result.UpdateStagingStatusFromPath(path, CTGitPath::StagingStatus::STAGING_STATUS_PARTIALLY_STAGED);
+					result.UpdateStagingStatusFromPath(path, CTGitPath::StagingStatus::PartiallyStaged);
 				else
-					result.UpdateStagingStatusFromPath(path, CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_STAGED);
+					result.UpdateStagingStatusFromPath(path, CTGitPath::StagingStatus::TotallyStaged);
 			}
 			const CTGitPathList& unstaged = filterlist ? unstagedFiltered : unstagedUnfiltered;
 			for (int j = 0; j < unstaged.GetCount(); ++j)
 			{
 				CString path = unstaged[j].GetGitPathString();
 				if (!stagedUnfiltered.LookForGitPath(path))
-					result.UpdateStagingStatusFromPath(path, CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_UNSTAGED);
+					result.UpdateStagingStatusFromPath(path, CTGitPath::StagingStatus::TotallyUnstaged);
 			}
 		}
 	}

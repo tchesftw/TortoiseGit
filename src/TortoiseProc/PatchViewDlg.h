@@ -21,6 +21,8 @@
 #include "SciEdit.h"
 #include "FindBar.h"
 #include "DiffLinesForStaging.h"
+#include "StagingOperations.h"
+#include "EnableStagingTypes.h"
 
 class IHasPatchView
 {
@@ -43,7 +45,7 @@ public:
 	void ShowAndAlignToParent();
 	void ParentOnMoving(HWND parentHWND, LPRECT pRect);
 	void ParentOnSizing(HWND parentHWND, LPRECT pRect);
-	void EnableStaging(int enableStagingType);
+	void EnableStaging(EnableStagingTypes enableStagingType);
 
 // Dialog Data
 	enum { IDD = IDD_PATCH_VIEW };
@@ -86,7 +88,7 @@ protected:
 
 	HACCEL				m_hAccel;
 
-	int					m_nEnableStagingType;
+	EnableStagingTypes	m_nEnableStagingType;
 
 	// CSciEditContextMenuInterface
 	virtual void		InsertMenuItems(CMenu& mPopup, int& nCmd) override;
@@ -100,6 +102,6 @@ protected:
 	int GetFirstLineNumberSelected();
 	int GetLastLineNumberSelected();
 	std::unique_ptr<char[]> GetFullLineByLineNumber(int line);
-	void StageOrUnstageSelectedLinesOrHunks(int stagingType);
-	CString WritePatchBufferToTemporaryFile(const std::unique_ptr<char[]>* data);
+	void StageOrUnstageSelectedLinesOrHunks(StagingType stagingType);
+	CString WritePatchBufferToTemporaryFile(const std::unique_ptr<char[]>& data);
 };

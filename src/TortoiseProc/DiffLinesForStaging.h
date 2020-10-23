@@ -36,8 +36,6 @@ enum class DiffLineTypes
 
 struct DiffLineForStaging
 {
-	DiffLineForStaging() {}
-
 	DiffLineForStaging(const char* line, int size, DiffLineTypes type)
 	{
 		sLine = std::make_unique<char[]>(size + 1);
@@ -76,7 +74,7 @@ public:
 	bool IsNoNewlineComment(int line) const;
 	int GetDocumentLength() const;
 
-	static bool GetOldAndNewLinesCountFromHunk(const std::unique_ptr<char[]>* strHunkStart, int* oldCount, int* newCount, bool allowSingleLine = false);
+	static bool GetOldAndNewLinesCountFromHunk(const std::unique_ptr<char[]>& strHunkStart, int* oldCount, int* newCount, bool allowSingleLine = false);
 
 #ifdef GTEST_INCLUDE_GTEST_GTEST_H_
 public:

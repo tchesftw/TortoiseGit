@@ -20,10 +20,14 @@
 #pragma once
 #include "stdafx.h"
 #include "DiffLinesForStaging.h"
-#define STAGING_TYPE_STAGE_LINES 0
-#define STAGING_TYPE_STAGE_HUNKS 1
-#define STAGING_TYPE_UNSTAGE_LINES 2
-#define STAGING_TYPE_UNSTAGE_HUNKS 3
+
+enum class StagingType
+{
+	StageLines,
+	StageHunks,
+	UnstageLines,
+	UnstageHunks
+};
 
 class StagingOperations
 {
@@ -33,7 +37,7 @@ public:
 		m_lines = lines;
 	}
 	std::unique_ptr<char[]> CreatePatchBufferToStageOrUnstageSelectedHunks() const;
-	std::unique_ptr<char[]> CreatePatchBufferToStageOrUnstageSelectedLines(int stagingType) const;
+	std::unique_ptr<char[]> CreatePatchBufferToStageOrUnstageSelectedLines(StagingType stagingType) const;
 
 private:
 	const CDiffLinesForStaging* m_lines;
@@ -46,11 +50,11 @@ private:
 #ifdef GTEST_INCLUDE_GTEST_GTEST_H_
 public:
 #endif
-	std::unique_ptr<char[]> ChangeOldAndNewLinesCount(const std::unique_ptr<char[]>* strHunkStart, int oldCount, int newCount) const;
+	std::unique_ptr<char[]> ChangeOldAndNewLinesCount(const std::unique_ptr<char[]>& strHunkStart, int oldCount, int newCount) const;
 
 private:
-	bool ParseHunkOnEitherSelectionBoundary(std::unique_ptr<char[]>* hunkWithoutStartLine, int hunkWithoutStartLineLen,
+	bool ParseHunkOnEitherSelectionBoundary(std::unique_ptr<char[]>& hunkWithoutStartLine, int hunkWithoutStartLineLen,
 											int hunkStartLine, int hunkLastLine,
 											int firstLineSelected, int lastLineSelected,
-											int* oldCount, int* newCount, int stagingType) const;
+											int* oldCount, int* newCount, StagingType stagingType) const;
 };

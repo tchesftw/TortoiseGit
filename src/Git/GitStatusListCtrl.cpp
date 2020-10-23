@@ -719,7 +719,7 @@ void CGitStatusListCtrl::Show(unsigned int dwShow, unsigned int dwCheck /*=0*/, 
 			if (m_bThreeStateCheckboxes)
 			{
 				auto stagingStatus = entry->m_stagingStatus;
-				if (stagingStatus == CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_STAGED || stagingStatus == CTGitPath::StagingStatus::STAGING_STATUS_PARTIALLY_STAGED)
+				if (stagingStatus == CTGitPath::StagingStatus::TotallyStaged || stagingStatus == CTGitPath::StagingStatus::PartiallyStaged)
 					entry->m_Checked = true;
 				else
 					entry->m_Checked = false;
@@ -1185,11 +1185,11 @@ void CGitStatusListCtrl::AddEntry(size_t arStatusArrayIndex, CTGitPath * GitPath
 
 	if (m_bThreeStateCheckboxes) // if three-state, display the staging status in the checkboxes
 	{
-		if (GitPath->m_stagingStatus == CTGitPath::StagingStatus::STAGING_STATUS_PARTIALLY_STAGED)
+		if (GitPath->m_stagingStatus == CTGitPath::StagingStatus::PartiallyStaged)
 			ListView_SetItemState(m_hWnd, listIndex, INDEXTOSTATEIMAGEMASK(3), LVIS_STATEIMAGEMASK)
-		else if (GitPath->m_stagingStatus == CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_STAGED)
+		else if (GitPath->m_stagingStatus == CTGitPath::StagingStatus::TotallyStaged)
 			SetCheck(listIndex, true);
-		else if (GitPath->m_stagingStatus == CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_UNSTAGED)
+		else if (GitPath->m_stagingStatus == CTGitPath::StagingStatus::TotallyUnstaged)
 			SetCheck(listIndex, false);
 	}
 	else
@@ -1413,7 +1413,7 @@ void CGitStatusListCtrl::CheckEntry(int index, int /*nListItems*/)
 	if (m_bThreeStateCheckboxes)
 	{
 		GitStageEntry(path);
-		path->m_stagingStatus = CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_STAGED;
+		path->m_stagingStatus = CTGitPath::StagingStatus::TotallyStaged;
 	}
 }
 
@@ -1470,7 +1470,7 @@ void CGitStatusListCtrl::UncheckEntry(int index, int /*nListItems*/)
 	if (m_bThreeStateCheckboxes)
 	{
 		GitUnstageEntry(path);
-		path->m_stagingStatus = CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_UNSTAGED;
+		path->m_stagingStatus = CTGitPath::StagingStatus::TotallyUnstaged;
 	}
 }
 void CGitStatusListCtrl::BuildStatistics()
@@ -3502,12 +3502,12 @@ void CGitStatusListCtrl::SetEntryCheck(CTGitPath* pEntry, int listboxIndex, bool
 		if (bCheck)
 		{
 			GitStageEntry(pEntry);
-			pEntry->m_stagingStatus = CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_STAGED;
+			pEntry->m_stagingStatus = CTGitPath::StagingStatus::TotallyStaged;
 		}
 		else
 		{
 			GitUnstageEntry(pEntry);
-			pEntry->m_stagingStatus = CTGitPath::StagingStatus::STAGING_STATUS_TOTALLY_UNSTAGED;
+			pEntry->m_stagingStatus = CTGitPath::StagingStatus::TotallyUnstaged;
 		}
 	}
 	SetCheck(listboxIndex, bCheck);

@@ -68,7 +68,7 @@ int StagingOperations::FindHunkEndForwardsFrom(int line, int topBoundaryLine) co
 	auto strHunkStart = m_lines->GetFullLineByLineNumber(hunkStart);
 
 	int oldCount, newCount;
-	if (!CDiffLinesForStaging::GetOldAndNewLinesCountFromHunk(&strHunkStart, &oldCount, &newCount))
+	if (!CDiffLinesForStaging::GetOldAndNewLinesCountFromHunk(strHunkStart, &oldCount, &newCount))
 		return -1;
 
 	return FindHunkEndGivenHunkStartAndCounts(hunkStart, oldCount, newCount);
@@ -167,7 +167,7 @@ std::unique_ptr<char[]> StagingOperations::CreatePatchBufferToStageOrUnstageSele
 		return nullptr;
 	auto hunksWithoutFirstFileHeader = m_lines->GetFullTextOfLineRange(startline, endline);
 	auto firstFileHeader = FindFileHeaderBackwardsFrom(startline);
-	int fullTempPatchLen = ::strlen(firstFileHeader.get()) + ::strlen(hunksWithoutFirstFileHeader.get()) + 1;
+	size_t fullTempPatchLen = strlen(firstFileHeader.get()) + strlen(hunksWithoutFirstFileHeader.get()) + 1;
 	auto fullTempPatch = std::make_unique<char[]>(fullTempPatchLen);
 	strcat_s(fullTempPatch.get(), fullTempPatchLen, firstFileHeader.get());
 	strcat_s(fullTempPatch.get(), fullTempPatchLen, hunksWithoutFirstFileHeader.get());
@@ -179,7 +179,7 @@ std::unique_ptr<char[]> StagingOperations::CreatePatchBufferToStageOrUnstageSele
 // file and applied to the index with git apply --cached (for staging) or git apply --cached -R (for unstaging).
 // This will not work for multi-file diffs.
 // This needs to take as parameter whether we're doing a staging or an unstaging, since the handling for those is different.
-std::unique_ptr<char[]> StagingOperations::CreatePatchBufferToStageOrUnstageSelectedLines(int stagingType) const
+std::unique_ptr<char[]> StagingOperations::CreatePatchBufferToStageOrUnstageSelectedLines(StagingType stagingType) const
 {
 	// Try to find a hunk backwards up to and including the first line in the patch
 	int firstHunkStartLine = FindHunkStartBackwardsFrom(m_lines->GetFirstLineNumberSelected(), 0);
@@ -200,7 +200,7 @@ std::unique_ptr<char[]> StagingOperations::CreatePatchBufferToStageOrUnstageSele
 
 	auto strFirstHunkStartLine = m_lines->GetFullLineByLineNumber(firstHunkStartLine);
 	int firstHunkOldCount, firstHunkNewCount;
-	if (!CDiffLinesForStaging::GetOldAndNewLinesCountFromHunk(&strFirstHunkStartLine, &firstHunkOldCount, &firstHunkNewCount))
+	if (!CDiffLinesForStaging::GetOldAndNewLinesCountFromHunk(strFirstHunkStartLine, &firstHunkOldCount, &firstHunkNewCount))
 		return nullptr;
 	int firstHunkLastLine = FindHunkEndGivenHunkStartAndCounts(firstHunkStartLine, firstHunkOldCount, firstHunkNewCount);
 	if (firstHunkLastLine == -1)
@@ -209,7 +209,7 @@ std::unique_ptr<char[]> StagingOperations::CreatePatchBufferToStageOrUnstageSele
 	int firstLineSelected = m_lines->GetFirstLineNumberSelected();
 	int lastLineSelected = m_lines->GetLastLineNumberSelected();
 
-	bool includeFirstHunkAtAll = ParseHunkOnEitherSelectionBoundary(&firstHunkWithoutStartLine,
+	bool includeFirstHunkAtAll = ParseHunkOnEitherSelectionBoundary(firstHunkWithoutStartLine,
 																	documentLength + 1,
 																	firstHunkStartLine, firstHunkLastLine,
 																	firstLineSelected, lastLineSelected,
@@ -223,7 +223,7 @@ std::unique_ptr<char[]> StagingOperations::CreatePatchBufferToStageOrUnstageSele
 	// about a corrupt patch (unless we passed --recount to git apply, but that could potentially cause other issues)
 	if (includeFirstHunkAtAll)
 	{
-		auto strHunkStartLineChanged = ChangeOldAndNewLinesCount(&strFirstHunkStartLine, firstHunkOldCount, firstHunkNewCount);
+		auto strHunkStartLineChanged = ChangeOldAndNewLinesCount(strFirstHunkStartLine, firstHunkOldCount, firstHunkNewCount);
 
 		strcat_s(fullTempPatch.get(), documentLength + 1, strHunkStartLineChanged.get());
 		strcat_s(fullTempPatch.get(), documentLength + 1, firstHunkWithoutStartLine.get());
@@ -252,10 +252,10 @@ std::unique_ptr<char[]> StagingOperations::CreatePatchBufferToStageOrUnstageSele
 
 	auto strLastHunkStartLine = m_lines->GetFullLineByLineNumber(lastHunkStartLine);
 	int lastHunkOldCount, lastHunkNewCount;
-	if (!CDiffLinesForStaging::GetOldAndNewLinesCountFromHunk(&strLastHunkStartLine, &lastHunkOldCount, &lastHunkNewCount))
+	if (!CDiffLinesForStaging::GetOldAndNewLinesCountFromHunk(strLastHunkStartLine, &lastHunkOldCount, &lastHunkNewCount))
 		return nullptr;
 
-	bool includeLastHunkAtAll = ParseHunkOnEitherSelectionBoundary(&lastHunkWithoutStartLine,
+	bool includeLastHunkAtAll = ParseHunkOnEitherSelectionBoundary(lastHunkWithoutStartLine,
 																   documentLength + 1,
 																   lastHunkStartLine, lastHunkLastLine,
 																   firstLineSelected, lastLineSelected,
@@ -264,7 +264,7 @@ std::unique_ptr<char[]> StagingOperations::CreatePatchBufferToStageOrUnstageSele
 
 	if (includeLastHunkAtAll)
 	{
-		auto strHunkStartLineChanged = ChangeOldAndNewLinesCount(&strLastHunkStartLine, lastHunkOldCount, lastHunkNewCount);
+		auto strHunkStartLineChanged = ChangeOldAndNewLinesCount(strLastHunkStartLine, lastHunkOldCount, lastHunkNewCount);
 
 		strcat_s(fullTempPatch.get(), documentLength + 1, strHunkStartLineChanged.get());
 		strcat_s(fullTempPatch.get(), documentLength + 1, lastHunkWithoutStartLine.get());
@@ -276,9 +276,9 @@ std::unique_ptr<char[]> StagingOperations::CreatePatchBufferToStageOrUnstageSele
 		return fullTempPatch;
 }
 
-// Takes a pointer to a buffer containing the first line of a hunk (@@xxxxxx@@)
+// Takes a buffer containing the first line of a hunk (@@xxxxxx@@)
 // Returns a new buffer with its old lines count and new lines count changed to the given ones.
-std::unique_ptr<char[]> StagingOperations::ChangeOldAndNewLinesCount(const std::unique_ptr<char[]>* strHunkStart,
+std::unique_ptr<char[]> StagingOperations::ChangeOldAndNewLinesCount(const std::unique_ptr<char[]>& strHunkStart,
 																	 int oldCount, int newCount) const
 {
 	std::string pattern = "^@@ -(\\d+?),(\\d+?) \\+(\\d+?),(\\d+?) @@";
@@ -286,9 +286,9 @@ std::unique_ptr<char[]> StagingOperations::ChangeOldAndNewLinesCount(const std::
 
 	std::unique_ptr<char[]> fmt = std::make_unique<char[]>(1024);
 	sprintf_s(fmt.get(), 1024, "@@ -$1,%d +$3,%d @@", oldCount, newCount);
-	std::string changedLine = std::regex_replace(strHunkStart->get(), rx, fmt.get());
+	std::string changedLine = std::regex_replace(strHunkStart.get(), rx, fmt.get());
 
-	int size = changedLine.length() + 1;
+	size_t size = changedLine.length() + 1;
 	auto ret = std::make_unique<char[]>(size);
 	strcpy_s(ret.get(), size, changedLine.c_str());
 	return ret;
@@ -306,12 +306,12 @@ std::unique_ptr<char[]> StagingOperations::ChangeOldAndNewLinesCount(const std::
 // The given newCount and oldCount are modified accordingly.
 // Returns true if at least one + or - line is within the user selection, false otherwise (meaning the hunk must be discarded entirely)
 // This needs to take as parameter whether we're doing a staging or an unstaging, since the handling for those is different.
-bool StagingOperations::ParseHunkOnEitherSelectionBoundary(std::unique_ptr<char[]>* hunkWithoutStartLine,
+bool StagingOperations::ParseHunkOnEitherSelectionBoundary(std::unique_ptr<char[]>& hunkWithoutStartLine,
 														   int hunkWithoutStartLineLen,
 														   int hunkStartLine, int hunkLastLine,
 														   int firstLineSelected, int lastLineSelected,
 														   int* oldCount, int* newCount,
-														   int stagingType) const
+														   StagingType stagingType) const
 {
 	bool includeHunkAtAll = false;
 	for (int i = hunkStartLine + 1; i <= hunkLastLine; i++)
@@ -319,47 +319,47 @@ bool StagingOperations::ParseHunkOnEitherSelectionBoundary(std::unique_ptr<char[
 		DiffLineTypes type = m_lines->GetLineType(i);
 		auto strLine = m_lines->GetFullLineByLineNumber(i);
 		if (type == DiffLineTypes::DEFAULT || type == DiffLineTypes::NO_NEWLINE_BOTHFILES)
-			strcat_s(hunkWithoutStartLine->get(), hunkWithoutStartLineLen, strLine.get());
+			strcat_s(hunkWithoutStartLine.get(), hunkWithoutStartLineLen, strLine.get());
 		else if (type == DiffLineTypes::ADDED || type == DiffLineTypes::NO_NEWLINE_NEWFILE)
 		{
 			if (i < firstLineSelected || i > lastLineSelected) // outside the user selection
 			{
-				if (stagingType == STAGING_TYPE_STAGE_LINES)
+				if (stagingType == StagingType::StageLines)
 				{
 					if (type == DiffLineTypes::ADDED) // hunk counts do not consider "\ No newline at end of file"
 						(*newCount)--;
 				}
-				else if (stagingType == STAGING_TYPE_UNSTAGE_LINES)
+				else if (stagingType == StagingType::UnstageLines)
 				{
 					if (type == DiffLineTypes::ADDED) // hunk counts do not consider "\ No newline at end of file"
 					{
 						strLine.get()[0] = ' '; // Turn it into a context line
 						(*oldCount)++;
 					}
-					strcat_s(hunkWithoutStartLine->get(), hunkWithoutStartLineLen, strLine.get());
+					strcat_s(hunkWithoutStartLine.get(), hunkWithoutStartLineLen, strLine.get());
 				}
 			}
 			else
 			{
 				if (type == DiffLineTypes::ADDED)
 					includeHunkAtAll = true;
-				strcat_s(hunkWithoutStartLine->get(), hunkWithoutStartLineLen, strLine.get());
+				strcat_s(hunkWithoutStartLine.get(), hunkWithoutStartLineLen, strLine.get());
 			}
 		}
 		else if (type == DiffLineTypes::DELETED || type == DiffLineTypes::NO_NEWLINE_OLDFILE)
 		{
 			if (i < firstLineSelected || i > lastLineSelected) // outside the user selection
 			{
-				if (stagingType == STAGING_TYPE_STAGE_LINES)
+				if (stagingType == StagingType::StageLines)
 				{
 					if (type == DiffLineTypes::DELETED) // hunk counts do not consider "\ No newline at end of file"
 					{
 						strLine.get()[0] = ' '; // Turn it into a context line
 						(*newCount)++;
 					}
-					strcat_s(hunkWithoutStartLine->get(), hunkWithoutStartLineLen, strLine.get());
+					strcat_s(hunkWithoutStartLine.get(), hunkWithoutStartLineLen, strLine.get());
 				}
-				else if (stagingType == STAGING_TYPE_UNSTAGE_LINES)
+				else if (stagingType == StagingType::UnstageLines)
 				{
 					if (type == DiffLineTypes::DELETED) // hunk counts do not consider "\ No newline at end of file"
 						(*oldCount)--;
@@ -369,7 +369,7 @@ bool StagingOperations::ParseHunkOnEitherSelectionBoundary(std::unique_ptr<char[
 			{
 				if (type == DiffLineTypes::DELETED)
 					includeHunkAtAll = true;
-				strcat_s(hunkWithoutStartLine->get(), hunkWithoutStartLineLen, strLine.get());
+				strcat_s(hunkWithoutStartLine.get(), hunkWithoutStartLineLen, strLine.get());
 			}
 		}
 	}

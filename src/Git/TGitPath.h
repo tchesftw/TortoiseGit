@@ -38,12 +38,12 @@ public:
 	int m_Stage;
 	int m_ParentNo;
 
-	enum StagingStatus : unsigned int
+	enum class StagingStatus
 	{
-		STAGING_STATUS_DONT_CARE = 0,
-		STAGING_STATUS_TOTALLY_STAGED = 1,
-		STAGING_STATUS_PARTIALLY_STAGED = 2,
-		STAGING_STATUS_TOTALLY_UNSTAGED = 3
+		DontCare,
+		TotallyStaged,
+		PartiallyStaged,
+		TotallyUnstaged
 	};
 
 	enum Actions : unsigned int

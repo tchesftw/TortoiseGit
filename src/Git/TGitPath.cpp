@@ -58,7 +58,7 @@ CTGitPath::CTGitPath(void)
 	, m_Action(0)
 	, m_ParentNo(0)
 	, m_Stage(0)
-	, m_stagingStatus(STAGING_STATUS_DONT_CARE)
+	, m_stagingStatus(StagingStatus::DontCare)
 {
 }
 

@@ -32,7 +32,7 @@
 #include "HyperLink.h"
 #include "PatchViewDlg.h"
 #include "MenuButton.h"
-#include "EnableStagingTypeDefines.h"
+#include "EnableStagingTypes.h"
 #include <regex>
 
 #define ENDDIALOGTIMER	100

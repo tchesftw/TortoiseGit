@@ -445,7 +445,7 @@
     <ClInclude Include="CommitIsOnRefsDlg.h" />
     <ClInclude Include="ConfigureGitExe.h" />
     <ClInclude Include="CreateChangelistDlg.h" />
-    <ClInclude Include="EnableStagingTypeDefines.h" />
+    <ClInclude Include="EnableStagingTypes.h" />
     <ClInclude Include="DiffLinesForStaging.h" />
     <ClInclude Include="FilterHelper.h" />
     <ClInclude Include="FindBar.h" />

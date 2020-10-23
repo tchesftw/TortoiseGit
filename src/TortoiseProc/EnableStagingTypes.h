@@ -18,6 +18,9 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 //
 #pragma once
-#define ENABLE_STAGING_TYPE_NONE 0
-#define ENABLE_STAGING_TYPE_STAGING 1
-#define ENABLE_STAGING_TYPE_UNSTAGING 2
+enum class EnableStagingTypes
+{
+	None,
+	Staging,
+	Unstaging
+};
