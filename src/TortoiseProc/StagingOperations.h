@@ -38,6 +38,7 @@ public:
 	}
 	std::unique_ptr<char[]> CreatePatchBufferToStageOrUnstageSelectedHunks() const;
 	std::unique_ptr<char[]> CreatePatchBufferToStageOrUnstageSelectedLines(StagingType stagingType) const;
+	static CString WritePatchBufferToTemporaryFile(const std::unique_ptr<char[]>& data);
 
 private:
 	const CDiffLinesForStaging* m_lines;

@@ -437,6 +437,9 @@ public:
 
 	CGitHash GetSubmodulePointer();
 
+	int ApplyPatchToIndex(const CString& patchPath, CString* out);
+	int ApplyPatchToIndexReverse(const CString& patchPath, CString* out);
+
 	int RefreshGitIndex(bool really = false);
 	int GetOneFile(const CString &Refname, const CTGitPath &path, const CString &outputfile);
 

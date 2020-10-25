@@ -836,6 +836,20 @@ int CGit::UnsetConfigValue(const CString& key, CONFIG_TYPE type)
 	return 0;
 }
 
+int CGit::ApplyPatchToIndex(const CString& patchPath, CString* out)
+{
+	CString cmd;
+	cmd.Format(L"git.exe apply --cached -- \"%s\"", static_cast<LPCWSTR>(patchPath));
+	return Run(cmd, out, CP_UTF8);
+}
+
+int CGit::ApplyPatchToIndexReverse(const CString& patchPath, CString* out)
+{
+	CString cmd;
+	cmd.Format(L"git.exe apply --cached -R -- \"%s\"", static_cast<LPCWSTR>(patchPath));
+	return Run(cmd, out, CP_UTF8);
+}
+
 CString CGit::GetCurrentBranch(bool fallback)
 {
 	CString output;

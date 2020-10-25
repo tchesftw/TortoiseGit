@@ -466,16 +466,16 @@ void CPatchViewDlg::StageOrUnstageSelectedLinesOrHunks(StagingType stagingType)
 		return;
 	}
 	
-	CString tempPatch = WritePatchBufferToTemporaryFile(strPatch);
-	if (!tempPatch)
+	CString tempPatch = StagingOperations::WritePatchBufferToTemporaryFile(strPatch);
+	if (tempPatch.IsEmpty())
 		return;
 
-	CString cmd, out;
+	CString out;
+	int ret;
 	if (stagingType == StagingType::StageHunks || stagingType == StagingType::StageLines)
-		cmd.Format(L"git.exe apply --cached \"%s\"", static_cast<LPCTSTR>(tempPatch));
+		ret = g_Git.ApplyPatchToIndex(tempPatch, &out);
 	else //if (stagingType == StagingType::UnstageHunks || stagingType == StagingType::UnstageLines)
-		cmd.Format(L"git.exe apply --cached -R \"%s\"", static_cast<LPCTSTR>(tempPatch));
-	int ret = g_Git.Run(cmd, &out, CP_UTF8);
+		ret = g_Git.ApplyPatchToIndexReverse(tempPatch, &out);
 	if (ret != 0)
 	{
 		MessageBox(out, L"TortoiseGit", MB_OK | MB_ICONERROR);
@@ -485,22 +485,6 @@ void CPatchViewDlg::StageOrUnstageSelectedLinesOrHunks(StagingType stagingType)
 	m_ctrlPatchView.Call(SCI_SETSELECTIONEND, 0);
 	// Tell the commit window we partially staged a file and ask it to update ourselves with the updated diff
 	m_ParentDlg->GetPatchViewParentWnd()->SendMessage(WM_PARTIALSTAGINGREFRESHPATCHVIEW);
-}
-
-// Creates a temporary file and writes to it the given buffer.
-// Returns the path of the created file.
-CString CPatchViewDlg::WritePatchBufferToTemporaryFile(const std::unique_ptr<char[]>& data)
-{
-	CString tempFile = ::GetTempFile();
-	FILE* fp = nullptr;
-	_wfopen_s(&fp, tempFile, L"w+b");
-	if (!fp)
-		return nullptr;
-
-	fwrite(data.get(), sizeof(char), ::strlen(data.get()), fp);
-	fclose(fp);
-
-	return tempFile;
 }
 
 void CPatchViewDlg::OnDestroy()

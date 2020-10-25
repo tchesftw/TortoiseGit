@@ -20,6 +20,7 @@
 #include <stdafx.h>
 #include "StagingOperations.h"
 #include <regex>
+#include "Git.h"
 
 bool StagingOperations::IsWithinFileHeader(int line) const
 {
@@ -374,4 +375,20 @@ bool StagingOperations::ParseHunkOnEitherSelectionBoundary(std::unique_ptr<char[
 		}
 	}
 	return includeHunkAtAll;
+}
+
+// Creates a temporary file and writes to it the given buffer.
+// Returns the path of the created file.
+CString StagingOperations::WritePatchBufferToTemporaryFile(const std::unique_ptr<char[]>& data)
+{
+	CString tempFile = ::GetTempFile();
+	FILE* fp = nullptr;
+	_wfopen_s(&fp, tempFile, L"w+b");
+	if (!fp)
+		return CString("");
+
+	fwrite(data.get(), sizeof(char), ::strlen(data.get()), fp);
+	fclose(fp);
+
+	return tempFile;
 }

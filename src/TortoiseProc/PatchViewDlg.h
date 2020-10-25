@@ -103,5 +103,4 @@ protected:
 	int GetLastLineNumberSelected();
 	std::unique_ptr<char[]> GetFullLineByLineNumber(int line);
 	void StageOrUnstageSelectedLinesOrHunks(StagingType stagingType);
-	CString WritePatchBufferToTemporaryFile(const std::unique_ptr<char[]>& data);
 };
