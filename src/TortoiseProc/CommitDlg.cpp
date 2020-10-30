@@ -1524,8 +1524,8 @@ UINT CCommitDlg::StatusThread()
 				GitRev headRevision;
 				if (headRevision.GetParentFromHash(hash))
 					MessageBox(headRevision.GetLastErr(), L"TortoiseGit", MB_ICONERROR);
-				// do not allow to show diff to "last" revision if it has more that one parent
-				if (headRevision.ParentsCount() != 1)
+				// do not allow to show diff to "last" revision if it has more that one parent or staging support is enabled
+				if (headRevision.ParentsCount() != 1 || m_bStagingSupport)
 				{
 					m_bAmendDiffToLastCommit = TRUE;
 					SendMessage(WM_UPDATEDATAFALSE);
@@ -2708,6 +2708,12 @@ void CCommitDlg::OnBnClickedCommitAmend()
 		this->m_NoAmendStr=this->m_cLogMessage.GetText();
 		m_cLogMessage.SetText(m_AmendStr);
 		GetDlgItem(IDC_COMMIT_AMENDDIFF)->ShowWindow(SW_SHOW);
+		if (m_bStagingSupport)
+		{
+			m_bAmendDiffToLastCommit = true;
+			UpdateData(false);
+			DialogEnableWindow(IDC_COMMIT_AMENDDIFF, false);
+		}
 		if (m_bSetCommitDateTime)
 			m_AsCommitDateCtrl.ShowWindow(SW_SHOW);
 	}
@@ -3038,6 +3044,12 @@ void CCommitDlg::PrepareStagingSupport()
 	m_ListCtrl.EnableThreeStateCheckboxes(m_bStagingSupport);
 	if (m_bStagingSupport)
 	{
+		if (m_bCommitAmend)
+		{
+			m_bAmendDiffToLastCommit = true;
+			UpdateData(false);
+			DialogEnableWindow(IDC_COMMIT_AMENDDIFF, false);
+		}
 		CMessageBox::ShowCheck(GetSafeHwnd(), IDS_TIPSTAGINGMODE, IDS_APPNAME, MB_ICONINFORMATION | MB_OK, L"HintStagingMode", IDS_MSGBOX_DONOTSHOWAGAIN);
 		GetDlgItem(IDC_VIEW_PATCH)->ShowWindow(SW_HIDE);
 		ShowPartialStagingTextAndUpdateFlag(true);
