@@ -3384,6 +3384,9 @@ int CGit::GetWorkingTreeChanges(CTGitPathList& result, bool amend, const CTGitPa
 				if (!stagedUnfiltered.LookForGitPath(path))
 					result.UpdateStagingStatusFromPath(path, CTGitPath::StagingStatus::TotallyUnstaged);
 			}
+			for (int j = 0; j < result.GetCount(); ++j)
+				if (result[j].m_Action & CTGitPath::LOGACTIONS_UNMERGED)
+					const_cast<CTGitPath&>(result[j]).m_stagingStatus = CTGitPath::StagingStatus::TotallyUnstaged;
 		}
 	}
 
