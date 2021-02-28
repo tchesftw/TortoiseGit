@@ -1,6 +1,6 @@
 ﻿// TortoiseGit - a Windows shell extension for easy version control
 
-// Copyright (C) 2008-2017, 2019-2020 - TortoiseGit
+// Copyright (C) 2008-2017, 2019-2021 - TortoiseGit
 
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -71,7 +71,6 @@ BEGIN_MESSAGE_MAP(CPatchViewDlg, CStandAloneDialog)
 	ON_COMMAND(IDM_SHOWFINDBAR, OnShowFindBar)
 	ON_COMMAND(IDM_FINDEXIT, OnEscape)
 	ON_COMMAND(IDM_FINDNEXT, OnFindNext)
-	ON_COMMAND(IDM_FINDPREV, OnFindPrev)
 	ON_COMMAND(IDM_FINDPREV, OnFindPrev)
 	ON_COMMAND(ID_STAGING_STAGESELECTEDLINES, OnStageLines)
 	ON_COMMAND(ID_STAGING_STAGESELECTEDHUNKS, OnStageHunks)

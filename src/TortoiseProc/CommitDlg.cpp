@@ -1,7 +1,7 @@
 ﻿// TortoiseGit - a Windows shell extension for easy version control
 
 // Copyright (C) 2003-2014 - TortoiseSVN
-// Copyright (C) 2008-2020 - TortoiseGit
+// Copyright (C) 2008-2021 - TortoiseGit
 
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -1394,9 +1394,9 @@ UINT CCommitDlg::StatusThread()
 	DialogEnableWindow(IDC_CHECKFILES, false);
 	DialogEnableWindow(IDC_CHECKSUBMODULES, false);
 
-	// When a file is completely staged by using the partial staging functionality (i.e., applying patches to the index),
-	// instead of clicking the checkbox (i.e., calling git add), Git may wrongly think that the file is partially staged
-	// if git update-index is called with --refresh instead of --really-refresh
+	// If one were to use the partial staging functionality on a file, staging hunks/lines until the file is totally staged, the file would erroneously
+	// be reported as partially staged if git update-index were called with --refresh instead of --really-refresh. Likewise for partial unstaging.
+	// Therefore, if staging support is enabled, --really-refresh is used, to avoid that situation.
 	g_Git.RefreshGitIndex(m_bStagingSupport);
 
 	CString dotGitPath;
@@ -2806,6 +2806,7 @@ void CCommitDlg::OnScnUpdateUI(NMHDR * /*pNMHDR*/, LRESULT *pResult)
 		*pResult=0;
 }
 
+// "dummy" implementation of this pure virtual function from IHasPatchView, not used here
 void CCommitDlg::TogglePatchView()
 {
 	return;
