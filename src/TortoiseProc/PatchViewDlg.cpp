@@ -125,7 +125,20 @@ void CPatchViewDlg::EnableStaging(EnableStagingTypes enableStagingType)
 				   enableStagingType == EnableStagingTypes::Unstaging ? MF_ENABLED : MF_DISABLED);
 	EnableMenuItem(GetMenu()->GetSafeHmenu(), ID_UNSTAGING_UNSTAGESELECTEDLINES,
 				   enableStagingType == EnableStagingTypes::Unstaging ? MF_ENABLED : MF_DISABLED);
-
+	
+	switch (enableStagingType)
+	{
+	case EnableStagingTypes::None:	
+		SetWindowText(CString(MAKEINTRESOURCE(IDS_VIEWPATCH)));
+		break;
+	case EnableStagingTypes::Staging:
+		SetWindowText(CString(MAKEINTRESOURCE(IDS_VIEWPATCH_INDEX_WORKTREE)));
+		break;
+	case EnableStagingTypes::Unstaging:
+		SetWindowText(CString(MAKEINTRESOURCE(IDS_VIEWPATCH_HEAD_INDEX)));
+		break;
+	}
+	
 	m_nEnableStagingType = enableStagingType; // This will be used to determine which context menu items to show
 }
 

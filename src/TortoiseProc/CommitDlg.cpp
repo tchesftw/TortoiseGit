@@ -2825,6 +2825,7 @@ void CCommitDlg::OnStnClickedViewPatch()
 	else
 	{
 		CreatePatchViewDlg();
+		m_patchViewdlg.SetWindowText(CString(MAKEINTRESOURCE(IDS_VIEWPATCH)));
 		ShowViewPatchText(false);
 		FillPatchView();
 	}
@@ -2836,6 +2837,7 @@ void CCommitDlg::OnStnClickedPartialStaging()
 	if (m_stagingDisplayState & SHOW_STAGING) // clicked Partial Staging, either with the patch window closed or open in Unstaging mode
 	{
 		CreatePatchViewDlg();
+		m_patchViewdlg.SetWindowText(CString(MAKEINTRESOURCE(IDS_VIEWPATCH_INDEX_WORKTREE)));
 		ShowPartialStagingTextAndUpdateDisplayState(false); // change "Partial Staging" to "Hide Staging"
 		ShowPartialUnstagingTextAndUpdateDisplayState(true); // show "Partial Unstaging"
 		FillPatchView(); // this needs to be called after the two calls to ShowPartial..... above
@@ -2853,6 +2855,7 @@ void CCommitDlg::OnStnClickedPartialUnstaging()
 	if (m_stagingDisplayState & SHOW_UNSTAGING) // clicked Partial Unstaging, either with the patch window closed or open in Staging mode
 	{
 		CreatePatchViewDlg();
+		m_patchViewdlg.SetWindowText(CString(MAKEINTRESOURCE(IDS_VIEWPATCH_HEAD_INDEX)));
 		ShowPartialUnstagingTextAndUpdateDisplayState(false); // change "Partial Unstaging" to "Hide Unstaging"
 		ShowPartialStagingTextAndUpdateDisplayState(true); // show "Partial Staging"
 		FillPatchView(); // this needs to be called after the two calls to ShowPartial..... above
