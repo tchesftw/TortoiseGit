@@ -1529,7 +1529,10 @@ UINT CCommitDlg::StatusThread()
 				GitRev headRevision;
 				if (headRevision.GetParentFromHash(hash))
 					MessageBox(headRevision.GetLastErr(), L"TortoiseGit", MB_ICONERROR);
-				// do not allow to show diff to "last" revision if it has more that one parent or staging support is enabled
+				// Allow only to show diff to "last" revision if it has more than one parent or staging support is enabled.
+				// For staging support, this is needed because when doing an amend and staging support is enabled, "Show diff to last commit" must stay checked and grayed out
+				// (staging and unstaging wouldn't make sense with it unchecked), and without this code, "show diff to last commit" would not be grayed out
+				// unless the commit being amended were a merge commit. It will have no effect unless "amend last commit" is checked.
 				if (headRevision.ParentsCount() != 1 || m_bStagingSupport)
 				{
 					m_bAmendDiffToLastCommit = TRUE;
