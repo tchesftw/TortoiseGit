@@ -1,6 +1,6 @@
 ﻿// TortoiseGit - a Windows shell extension for easy version control
 
-// Copyright (C) 2008-2020 - TortoiseGit
+// Copyright (C) 2008-2021 - TortoiseGit
 // Copyright (C) 2003-2008, 2013-2015 - TortoiseSVN
 
 // This program is free software; you can redistribute it and/or
@@ -1012,6 +1012,30 @@ void CGitStatusListCtrl::GitUnstageEntry(CTGitPath* entry)
 	{
 		MessageBox(L"Error unstaging file:\r\n" + out, L"TortoiseGit", MB_OK | MB_ICONERROR);
 		return;
+	}
+}
+
+void CGitStatusListCtrl::UpdateSelectedFileStagingStatus(CTGitPath::StagingStatus newStatus)
+{
+	CAutoWriteLock locker(m_guard);
+	POSITION pos = GetFirstSelectedItemPosition();
+	if (pos)
+	{
+		int nSelect = GetNextSelectedItem(pos);
+		auto p = GetListEntry(nSelect);
+		p->m_stagingStatus = newStatus;
+		{
+			ScopedInDecrement blocker(m_nBlockItemChangeHandler);
+			if (newStatus == CTGitPath::StagingStatus::PartiallyStaged)
+				ListView_SetItemState(m_hWnd, nSelect, INDEXTOSTATEIMAGEMASK(3), LVIS_STATEIMAGEMASK)
+			else if (newStatus == CTGitPath::StagingStatus::TotallyStaged)
+				SetCheck(nSelect, true);
+			else if (newStatus == CTGitPath::StagingStatus::TotallyUnstaged)
+				SetCheck(nSelect, false);	
+		}
+		
+
+		//Invalidate();
 	}
 }
 

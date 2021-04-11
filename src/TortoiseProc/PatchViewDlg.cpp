@@ -478,6 +478,18 @@ void CPatchViewDlg::StageOrUnstageSelectedLinesOrHunks(StagingType stagingType)
 		return;
 	}
 	
+
+	CTGitPath::StagingStatus newStatus; // this will be sent to the commit dialog so that it can update the file checkbox/status
+	if (strcmp(wholePatchBuf.get(), strPatch.get()) == 0)
+	{
+		if (stagingType == StagingType::StageLines || stagingType == StagingType::StageHunks)
+			newStatus = CTGitPath::StagingStatus::TotallyStaged;
+		else // stagingType == StagingType::UnstageLines || stagingType == StagingType::UnstageHunks
+			newStatus = CTGitPath::StagingStatus::TotallyUnstaged;
+	}
+	else // if the patch to be applied is different than the whole diff, the file is still partially staged or became partially staged
+		newStatus = CTGitPath::StagingStatus::PartiallyStaged;
+
 	CString tempPatch = StagingOperations::WritePatchBufferToTemporaryFile(strPatch);
 	if (tempPatch.IsEmpty())
 		return;
@@ -493,10 +505,9 @@ void CPatchViewDlg::StageOrUnstageSelectedLinesOrHunks(StagingType stagingType)
 		MessageBox(out, L"TortoiseGit", MB_OK | MB_ICONERROR);
 		return;
 	}
-	m_ctrlPatchView.Call(SCI_SETSELECTIONSTART, 0);
-	m_ctrlPatchView.Call(SCI_SETSELECTIONEND, 0);
+
 	// Tell the commit window we partially staged a file and ask it to update ourselves with the updated diff
-	m_ParentDlg->GetPatchViewParentWnd()->SendMessage(WM_PARTIALSTAGINGREFRESHPATCHVIEW);
+	m_ParentDlg->GetPatchViewParentWnd()->SendMessage(WM_PARTIALSTAGINGREFRESHPATCHVIEW, static_cast<WPARAM>(newStatus));
 }
 
 void CPatchViewDlg::OnDestroy()
