@@ -737,7 +737,7 @@ void CGitStatusListCtrl::Show(unsigned int dwShow, unsigned int dwCheck /*=0*/, 
 					auto it = m_pathToChangelist.find(path);
 					if ((it != m_pathToChangelist.end()) && (it->second.Compare(GITSLC_IGNORECHANGELIST) == 0))
 						entry->m_Checked = false; // is in ignore-on-commit
-					else 
+					else
 						entry->m_Checked = true;
 				}
 				else
@@ -1031,9 +1031,8 @@ void CGitStatusListCtrl::UpdateSelectedFileStagingStatus(CTGitPath::StagingStatu
 			else if (newStatus == CTGitPath::StagingStatus::TotallyStaged)
 				SetCheck(nSelect, true);
 			else if (newStatus == CTGitPath::StagingStatus::TotallyUnstaged)
-				SetCheck(nSelect, false);	
+				SetCheck(nSelect, false);
 		}
-		
 
 		//Invalidate();
 	}

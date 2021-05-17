@@ -321,7 +321,7 @@ bool CPicture::TryLoadFreeImage(const tstring& sFilePathName)
 	m_Width = width;
 	m_Height = height;
 	m_pBitmap = std::move(pBitmap);
-	
+
 	return true;
 }
 

@@ -229,7 +229,7 @@ std::unique_ptr<char[]> StagingOperations::CreatePatchBufferToStageOrUnstageSele
 		strcat_s(fullTempPatch.get(), documentLength + 1, strHunkStartLineChanged.get());
 		strcat_s(fullTempPatch.get(), documentLength + 1, firstHunkWithoutStartLine.get());
 	}
-	
+
 	int lastHunkStartLine = FindHunkStartBackwardsFrom(lastLineSelected, firstHunkStartLine);// firstHunkLastLine + 1);
 	if (lastHunkStartLine == -1)
 		return nullptr;

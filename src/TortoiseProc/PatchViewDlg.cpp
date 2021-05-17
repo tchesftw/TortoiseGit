@@ -125,10 +125,10 @@ void CPatchViewDlg::EnableStaging(EnableStagingTypes enableStagingType)
 				   enableStagingType == EnableStagingTypes::Unstaging ? MF_ENABLED : MF_DISABLED);
 	EnableMenuItem(GetMenu()->GetSafeHmenu(), ID_UNSTAGING_UNSTAGESELECTEDLINES,
 				   enableStagingType == EnableStagingTypes::Unstaging ? MF_ENABLED : MF_DISABLED);
-	
+
 	switch (enableStagingType)
 	{
-	case EnableStagingTypes::None:	
+	case EnableStagingTypes::None:
 		SetWindowText(CString(MAKEINTRESOURCE(IDS_VIEWPATCH)));
 		break;
 	case EnableStagingTypes::Staging:
@@ -138,7 +138,7 @@ void CPatchViewDlg::EnableStaging(EnableStagingTypes enableStagingType)
 		SetWindowText(CString(MAKEINTRESOURCE(IDS_VIEWPATCH_HEAD_INDEX)));
 		break;
 	}
-	
+
 	m_nEnableStagingType = enableStagingType; // This will be used to determine which context menu items to show
 }
 
@@ -477,7 +477,6 @@ void CPatchViewDlg::StageOrUnstageSelectedLinesOrHunks(StagingType stagingType)
 		MessageBox(CString(MAKEINTRESOURCE(IDS_ERROR_PARTIALSTAGING)), L"TortoiseGit", MB_OK | MB_ICONERROR);
 		return;
 	}
-	
 
 	CTGitPath::StagingStatus newStatus; // this will be sent to the commit dialog so that it can update the file checkbox/status
 	if (strcmp(wholePatchBuf.get(), strPatch.get()) == 0)
@@ -535,7 +534,7 @@ void CPatchViewDlg::InsertMenuItems(CMenu& mPopup, int& nCmd)
 	{
 		m_nStageHunks = nCmd++;
 		mPopup.AppendMenu(MF_STRING | MF_ENABLED, m_nStageHunks, _T("Stage selected &hunks"));
-		
+
 		m_nStageLines = nCmd++;
 		mPopup.AppendMenu(MF_STRING | MF_ENABLED, m_nStageLines, _T("Stage selected &lines"));
 	}

@@ -784,9 +784,9 @@ void CCommitDlg::OnOK()
 
 	bool bAddSuccess = true;
 	bool bCloseCommitDlg = false;
-	
+
 	CBlockCacheForPath cacheBlock(g_Git.m_CurrentDir);
-	
+
 	if (!m_bStagingSupport)
 	{
 		PrepareIndexForCommitWithoutStagingSupport(nListItems, bAddSuccess, nchecked, mgtReAddAfterCommit, mgtReDelAfterCommit);
@@ -797,7 +797,6 @@ void CCommitDlg::OnOK()
 		for (int j = 0; bAddSuccess && j < nListItems; ++j)
 			CShellUpdater::Instance().AddPathForUpdate(*m_ListCtrl.GetListEntry(j));
 	}
-	
 
 	if (bAddSuccess && m_bCreateNewBranch)
 	{
@@ -2530,7 +2529,7 @@ LRESULT CCommitDlg::OnUpdateDataFalse(WPARAM, LPARAM)
 LRESULT CCommitDlg::OnPartialStagingRefreshPatchView(WPARAM wParam, LPARAM)
 {
 	m_patchViewdlg.ClearView();
-	
+
 	{
 		// Block the item change handler to make sure FillPatchView is called only once (below)
 		ScopedInDecrement blocker(m_nBlockItemChangeHandler);
