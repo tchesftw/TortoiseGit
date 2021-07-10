@@ -1,6 +1,6 @@
 ﻿// TortoiseGit - a Windows shell extension for easy version control
 
-// Copyright (C) 2018-2020 - TortoiseGit
+// Copyright (C) 2018-2021 - TortoiseGit
 
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -54,7 +54,7 @@ TEST(CDiffLinesForStaging, LineTypes)
 {
 	auto buf = ReadResourcePatchToBuffer(L"\\patches\\partial-staging.patch");
 	const int numLines = 105;
-	CDiffLinesForStaging lines(buf, numLines, 0, 0); // 0 and 0 don't matter here; numLines is sanity-checked by the constructor itself
+	CDiffLinesForStaging lines(buf.get(), numLines, 0, 0); // 0 and 0 don't matter here; numLines is sanity-checked by the constructor itself
 
 	TestLineType(lines, { 0 }, DiffLineTypes::COMMAND);
 	TestLineType(lines, { 1 }, DiffLineTypes::COMMENT);
@@ -90,7 +90,7 @@ TEST(CDiffLinesForStaging, LineTypesFoolParser)
 {
 	auto buf = ReadResourcePatchToBuffer(L"\\patches\\fool-parser.patch");
 	const int numLines = 14;
-	CDiffLinesForStaging lines(buf, numLines, 0, 0); // 0 and 0 don't matter here; numLines is sanity-checked by the constructor itself
+	CDiffLinesForStaging lines(buf.get(), numLines, 0, 0); // 0 and 0 don't matter here; numLines is sanity-checked by the constructor itself
 
 	TestLineType(lines, { 0 }, DiffLineTypes::COMMAND);
 	TestLineType(lines, { 1 }, DiffLineTypes::COMMENT);
@@ -106,7 +106,7 @@ TEST(CDiffLinesForStaging, LineTypesNoNewlineAdded)
 {
 	auto buf = ReadResourcePatchToBuffer(L"\\patches\\newline-at-end-of-file-added.patch");
 	const int numLines = 11;
-	CDiffLinesForStaging lines(buf, numLines, 0, 0); // 0 and 0 don't matter here; numLines is sanity-checked by the constructor itself
+	CDiffLinesForStaging lines(buf.get(), numLines, 0, 0); // 0 and 0 don't matter here; numLines is sanity-checked by the constructor itself
 
 	TestLineType(lines, { 0 }, DiffLineTypes::COMMAND);
 	TestLineType(lines, { 1 }, DiffLineTypes::COMMENT);
@@ -122,7 +122,7 @@ TEST(CDiffLinesForStaging, LineTypesNoNewlineDeleted)
 {
 	auto buf = ReadResourcePatchToBuffer(L"\\patches\\newline-at-end-of-file-deleted.patch");
 	const int numLines = 11;
-	CDiffLinesForStaging lines(buf, numLines, 0, 0); // 0 and 0 don't matter here; numLines is sanity-checked by the constructor itself
+	CDiffLinesForStaging lines(buf.get(), numLines, 0, 0); // 0 and 0 don't matter here; numLines is sanity-checked by the constructor itself
 
 	TestLineType(lines, { 0 }, DiffLineTypes::COMMAND);
 	TestLineType(lines, { 1 }, DiffLineTypes::COMMENT);
@@ -138,7 +138,7 @@ TEST(CDiffLinesForStaging, LineTypesNoNewlineLastLineModified)
 {
 	auto buf = ReadResourcePatchToBuffer(L"\\patches\\newline-at-end-of-file-last-line-modified.patch");
 	const int numLines = 12;
-	CDiffLinesForStaging lines(buf, numLines, 0, 0); // 0 and 0 don't matter here; numLines is sanity-checked by the constructor itself
+	CDiffLinesForStaging lines(buf.get(), numLines, 0, 0); // 0 and 0 don't matter here; numLines is sanity-checked by the constructor itself
 
 	TestLineType(lines, { 0 }, DiffLineTypes::COMMAND);
 	TestLineType(lines, { 1 }, DiffLineTypes::COMMENT);
@@ -155,7 +155,7 @@ TEST(CDiffLinesForStaging, LineTypesNoNewlineOtherLineModified)
 {
 	auto buf = ReadResourcePatchToBuffer(L"\\patches\\newline-at-end-of-file-other-line-modified.patch");
 	const int numLines = 11;
-	CDiffLinesForStaging lines(buf, numLines, 0, 0); // 0 and 0 don't matter here; numLines is sanity-checked by the constructor itself
+	CDiffLinesForStaging lines(buf.get(), numLines, 0, 0); // 0 and 0 don't matter here; numLines is sanity-checked by the constructor itself
 
 	TestLineType(lines, { 0 }, DiffLineTypes::COMMAND);
 	TestLineType(lines, { 1 }, DiffLineTypes::COMMENT);
@@ -167,35 +167,35 @@ TEST(CDiffLinesForStaging, LineTypesNoNewlineOtherLineModified)
 	TestLineType(lines, { 9 }, DiffLineTypes::NO_NEWLINE_BOTHFILES);
 }
 
-inline void TestHunkStagingNullptr(const std::unique_ptr<char[]>& buf, int numLines, int firstLineSelected, int lastLineSelected)
+inline void TestHunkStagingNullptr(const char* buf, int numLines, int firstLineSelected, int lastLineSelected)
 {
 	CDiffLinesForStaging lines(buf, numLines, firstLineSelected, lastLineSelected);
 	StagingOperations op(&lines);
 	EXPECT_EQ(op.CreatePatchBufferToStageOrUnstageSelectedHunks(), nullptr);
 }
 
-inline void TestHunkStagingException(const std::unique_ptr<char[]>& buf, int numLines, int firstLineSelected, int lastLineSelected)
+inline void TestHunkStagingException(const char* buf, int numLines, int firstLineSelected, int lastLineSelected)
 {
 	CDiffLinesForStaging lines(buf, numLines, firstLineSelected, lastLineSelected);
 	StagingOperations op(&lines);
 	EXPECT_ANY_THROW(op.CreatePatchBufferToStageOrUnstageSelectedHunks());
 }
 
-inline void TestLineStagingNullptr(const std::unique_ptr<char[]>& buf, int numLines, int firstLineSelected, int lastLineSelected)
+inline void TestLineStagingNullptr(const char* buf, int numLines, int firstLineSelected, int lastLineSelected)
 {
 	CDiffLinesForStaging lines(buf, numLines, firstLineSelected, lastLineSelected);
 	StagingOperations op(&lines);
 	EXPECT_EQ(op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::StageLines), nullptr);
 }
 
-inline void TestLineUnstagingNullptr(const std::unique_ptr<char[]>& buf, int numLines, int firstLineSelected, int lastLineSelected)
+inline void TestLineUnstagingNullptr(const char* buf, int numLines, int firstLineSelected, int lastLineSelected)
 {
 	CDiffLinesForStaging lines(buf, numLines, firstLineSelected, lastLineSelected);
 	StagingOperations op(&lines);
 	EXPECT_EQ(op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::UnstageLines), nullptr);
 }
 
-inline void TestLineStagingException(const std::unique_ptr<char[]>& buf, int numLines, int firstLineSelected, int lastLineSelected)
+inline void TestLineStagingException(const char* buf, int numLines, int firstLineSelected, int lastLineSelected)
 {
 	CDiffLinesForStaging lines(buf, numLines, firstLineSelected, lastLineSelected);
 	StagingOperations op(&lines);
@@ -263,7 +263,7 @@ inline void ExpectPositionLineCountsChanged(const CDiffLinesForStaging& base, co
 {
 	EXPECT_EQ(temp.GetLineVec()[tempPositionLine].type, DiffLineTypes::POSITION);
 	StagingOperations op(&base);
-	auto changedbuf = op.ChangeOldAndNewLinesCount(base.GetLineVec()[basePositionLine].sLine, new_oldCount, new_newCount);
+	auto changedbuf = op.ChangeOldAndNewLinesCount(base.GetLineVec()[basePositionLine].sLine.get(), new_oldCount, new_newCount);
 	EXPECT_EQ(strcmp(changedbuf.get(), temp.GetLineVec()[tempPositionLine].sLine.get()), 0);
 }
 
@@ -275,63 +275,63 @@ TEST(StagingOperations, PatchBuffer)
 	// nothing useful selected (file header)
 	for (int i = 0; i <= 3; i++)
 		for (int j = i; j <= 3; j++)
-			TestHunkStagingNullptr(buf, numLines, i, j);
+			TestHunkStagingNullptr(buf.get(), numLines, i, j);
 
 	// firstLineSelected > lastLineSelected (should never happen)
-	TestHunkStagingNullptr(buf, numLines, 1, 0);
+	TestHunkStagingNullptr(buf.get(), numLines, 1, 0);
 
 	// out-of-bounds (should never happen)
-	TestHunkStagingException(buf, numLines, 0, numLines);
-	TestHunkStagingException(buf, numLines, numLines, 0);
-	TestHunkStagingException(buf, numLines, numLines, numLines);
-	TestHunkStagingException(buf, numLines, numLines - 1, numLines);
-	TestHunkStagingException(buf, numLines, numLines, numLines - 1);
+	TestHunkStagingException(buf.get(), numLines, 0, numLines);
+	TestHunkStagingException(buf.get(), numLines, numLines, 0);
+	TestHunkStagingException(buf.get(), numLines, numLines, numLines);
+	TestHunkStagingException(buf.get(), numLines, numLines - 1, numLines);
+	TestHunkStagingException(buf.get(), numLines, numLines, numLines - 1);
 
 	// nothing useful selected (file header and/or only context lines)
 	for (int i = 0; i <= 7; i++)
 		for (int j = i; j <= 7; j++)
-			TestLineStagingNullptr(buf, numLines, i, j);
+			TestLineStagingNullptr(buf.get(), numLines, i, j);
 
 	for (int i = 10; i <= 14; i++)
 		for (int j = i; j <= 14; j++)
-			TestLineStagingNullptr(buf, numLines, i, j);
+			TestLineStagingNullptr(buf.get(), numLines, i, j);
 
 	for (int i = 101; i <= 104; i++)
 		for (int j = i; j <= 104; j++)
-			TestLineStagingNullptr(buf, numLines, i, j);
+			TestLineStagingNullptr(buf.get(), numLines, i, j);
 
 	// nothing useful selected (only context lines from neighboring hunks)
 	for (int i = 30; i <= 36; i++)
 		for (int j = i; j <= 36; j++)
-			TestLineStagingNullptr(buf, numLines, i, j);
+			TestLineStagingNullptr(buf.get(), numLines, i, j);
 
 	// nothing useful selected (last line)
-	TestLineStagingNullptr(buf, numLines, numLines - 1, numLines - 1);
+	TestLineStagingNullptr(buf.get(), numLines, numLines - 1, numLines - 1);
 
 	// firstLineSelected > lastLineSelected (should never happen)
-	TestLineStagingNullptr(buf, numLines, 1, 0);
+	TestLineStagingNullptr(buf.get(), numLines, 1, 0);
 
 	// out-of-bounds (should never happen)
-	TestLineStagingException(buf, numLines, 0, numLines);
-	TestLineStagingException(buf, numLines, numLines, 0);
-	TestLineStagingException(buf, numLines, numLines, numLines);
-	TestLineStagingException(buf, numLines, numLines - 1, numLines);
-	TestLineStagingException(buf, numLines, numLines, numLines - 1);
+	TestLineStagingException(buf.get(), numLines, 0, numLines);
+	TestLineStagingException(buf.get(), numLines, numLines, 0);
+	TestLineStagingException(buf.get(), numLines, numLines, numLines);
+	TestLineStagingException(buf.get(), numLines, numLines - 1, numLines);
+	TestLineStagingException(buf.get(), numLines, numLines, numLines - 1);
 
 	// The first hunk with some of its modified lines selected
-	CDiffLinesForStaging base(buf, numLines, 7, 11); // user selected lines 8 to 12 and clicked line staging
+	CDiffLinesForStaging base(buf.get(), numLines, 7, 11); // user selected lines 8 to 12 and clicked line staging
 	StagingOperations op(&base);
 	auto tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::StageLines);
-	CDiffLinesForStaging temp(tempbuf, 23, 0, 0); // the temporary patch should have 23 lines, 0 and 0 don't matter here
+	CDiffLinesForStaging temp(tempbuf.get(), 23, 0, 0); // the temporary patch should have 23 lines, 0 and 0 don't matter here
 	ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 15); // first 15 lines
 	ExpectOldLineTurnedIntoContext(base, temp, { {15,15},{19,18} });
 	ExpectLineIncludedAsIs(base, temp, { {17,16},{18,17},{21,19},{22,20},{23,21},{104,22} });
 
 	// Two hunks at the end of the file, both with at least one - or + line selected
-	base = CDiffLinesForStaging(buf, numLines, 84, 99); // user selected lines 85 to 100 and clicked line staging
+	base = CDiffLinesForStaging(buf.get(), numLines, 84, 99); // user selected lines 85 to 100 and clicked line staging
 	op = StagingOperations(&base);
 	tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::StageLines);
-	temp = CDiffLinesForStaging(tempbuf, 29, 0, 0); // the temporary patch should have 29 lines, 0 and 0 don't matter here
+	temp = CDiffLinesForStaging(tempbuf.get(), 29, 0, 0); // the temporary patch should have 29 lines, 0 and 0 don't matter here
 	ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 4); // first 4 lines (file header)
 	ExpectPositionLineCountsChanged(base, temp, 79, 4, 12, 13); // @@ -336,12 +334,12  ->  @@ -336,12 +334,13
 	ExpectLineRangeIncludedAsIs(base, temp, 80, 5, 3);
@@ -342,19 +342,19 @@ TEST(StagingOperations, PatchBuffer)
 	ExpectLineRangeIncludedAsIs(base, temp, 101, 25, 4);
 
 	// Four hunks. The two hunks at either end have no - or + lines selected and so must be discarded
-	base = CDiffLinesForStaging(buf, numLines, 30, 62); // user selected lines 31 to 63 and clicked line unstaging
+	base = CDiffLinesForStaging(buf.get(), numLines, 30, 62); // user selected lines 31 to 63 and clicked line unstaging
 	op = StagingOperations(&base);
 	tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::UnstageLines);
-	temp = CDiffLinesForStaging(tempbuf, 31, 0, 0); // the temporary patch should have 31 lines, 0 and 0 don't matter here
+	temp = CDiffLinesForStaging(tempbuf.get(), 31, 0, 0); // the temporary patch should have 31 lines, 0 and 0 don't matter here
 	ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 4); // first 4 lines (file header)
 	ExpectLineRangeIncludedAsIs(base, temp, 33, 4, 26);
 	ExpectLineIncludedAsIs(base, temp, { {104,30} });
 
 	// Two hunks with some of their modified lines selected
-	base = CDiffLinesForStaging(buf, numLines, 64, 74); // user selected lines 65 to 75 and clicked line unstaging
+	base = CDiffLinesForStaging(buf.get(), numLines, 64, 74); // user selected lines 65 to 75 and clicked line unstaging
 	op = StagingOperations(&base);
 	tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::UnstageLines);
-	temp = CDiffLinesForStaging(tempbuf, 24, 0, 0); // the temporary patch should have 24 lines, 0 and 0 don't matter here
+	temp = CDiffLinesForStaging(tempbuf.get(), 24, 0, 0); // the temporary patch should have 24 lines, 0 and 0 don't matter here
 	ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 4); // first 4 lines (file header)
 	ExpectPositionLineCountsChanged(base, temp, 59, 4, 7, 8); // @@ -122,8 +120,8  ->  @@ -122,7 +120,8 
 	ExpectLineRangeIncludedAsIs(base, temp, 60, 5, 3);
@@ -374,9 +374,9 @@ TEST(StagingOperations, SingleLine)
 	for (int i = 0; i < numLines; i++)
 		for (int j = i; j < numLines; j++)
 		{
-			TestHunkStagingNullptr(buf, numLines, i, j);
-			TestLineStagingNullptr(buf, numLines, i, j);
-			TestLineUnstagingNullptr(buf, numLines, i, j);
+			TestHunkStagingNullptr(buf.get(), numLines, i, j);
+			TestLineStagingNullptr(buf.get(), numLines, i, j);
+			TestLineUnstagingNullptr(buf.get(), numLines, i, j);
 		}
 }
 
@@ -388,9 +388,9 @@ TEST(StagingOperations, DeletedFile)
 	for (int i = 6; i < 21; i++) // covers some of the lines regarding the deleted file and also part of the diff headers
 		for (int j = i; j < 21; j++)
 		{
-			TestHunkStagingNullptr(buf, numLines, i, j);
-			TestLineStagingNullptr(buf, numLines, i, j);
-			TestLineUnstagingNullptr(buf, numLines, i, j);
+			TestHunkStagingNullptr(buf.get(), numLines, i, j);
+			TestLineStagingNullptr(buf.get(), numLines, i, j);
+			TestLineUnstagingNullptr(buf.get(), numLines, i, j);
 		}
 }
 
@@ -402,9 +402,9 @@ TEST(StagingOperations, AddedFile)
 	for (int i = 166; i < 179; i++) // covers the lines regarding the added file and also its headers
 		for (int j = i; j < 179; j++)
 		{
-			TestHunkStagingNullptr(buf, numLines, i, j);
-			TestLineStagingNullptr(buf, numLines, i, j);
-			TestLineUnstagingNullptr(buf, numLines, i, j);
+			TestHunkStagingNullptr(buf.get(), numLines, i, j);
+			TestLineStagingNullptr(buf.get(), numLines, i, j);
+			TestLineUnstagingNullptr(buf.get(), numLines, i, j);
 		}
 }
 
@@ -425,32 +425,32 @@ TEST_P(CBasicGitWithPartialStagingRepositoryFixture, NoNewlineAdded)
 	for (int i = 7; i <= 7; i++) // - line alone or with \ No newline
 		for (int j = i; j <= 8; j++)
 		{
-			CDiffLinesForStaging base(buf, numLines, i, j);
+			CDiffLinesForStaging base(buf.get(), numLines, i, j);
 			StagingOperations op(&base);
 			auto tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::StageLines);
-			CDiffLinesForStaging temp(tempbuf, 10, 0, 0); // the temporary patch should have 10 lines, 0 and 0 don't matter here
+			CDiffLinesForStaging temp(tempbuf.get(), 10, 0, 0); // the temporary patch should have 10 lines, 0 and 0 don't matter here
 			ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 4); // first 4 lines (file header)
 			ExpectPositionLineCountsChanged(base, temp, 4, 4, 3, 2); // @@ -1,3 +1,3 @@  ->  @@ -1,3 +1,2 @@
 			ExpectLineRangeIncludedAsIs(base, temp, 5, 5, 4);
 			ExpectLineIncludedAsIs(base, temp, { {10, 9} });
 
 			CString cmd, out;
-			EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf)), &out));
+			EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf.get())), &out));
 			EXPECT_STREQ(out, L"");
 			cmd.Format(L"git.exe reset --hard HEAD");
 			EXPECT_FALSE(g_Git.Run(cmd, &out, CP_UTF8));
 		}
 
 	// \ No newline alone
-	TestLineStagingNullptr(buf, numLines, 8, 8);
+	TestLineStagingNullptr(buf.get(), numLines, 8, 8);
 
 	// This will stage a "3" and newline being concatenated onto the old "3" without newline  (3 no newline -> 33 newline)
 	for (auto& pair : std::initializer_list<std::pair<int, int>>{ {8,9}, {8,10}, {9,9}, {9,10} }) // + line alone or with \ No newline and/or last (empty) line
 	{
-		CDiffLinesForStaging base(buf, numLines, pair.first, pair.second);
+		CDiffLinesForStaging base(buf.get(), numLines, pair.first, pair.second);
 		StagingOperations op(&base);
 		auto tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::StageLines);
-		CDiffLinesForStaging temp(tempbuf, 11, 0, 0); // the temporary patch should have 11 lines, 0 and 0 don't matter here
+		CDiffLinesForStaging temp(tempbuf.get(), 11, 0, 0); // the temporary patch should have 11 lines, 0 and 0 don't matter here
 		ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 4); // first 4 lines (file header)
 		ExpectPositionLineCountsChanged(base, temp, 4, 4, 3, 4); // @@ -1,3 +1,3 @@  ->  @@ -1,3 +1,4 @@
 		ExpectLineRangeIncludedAsIs(base, temp, 5, 5, 2);
@@ -458,7 +458,7 @@ TEST_P(CBasicGitWithPartialStagingRepositoryFixture, NoNewlineAdded)
 		ExpectLineRangeIncludedAsIs(base, temp, 8, 8, 3);
 
 		CString cmd, out;
-		EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf)), &out));
+		EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf.get())), &out));
 		EXPECT_STREQ(out, L"");
 		cmd.Format(L"git.exe reset --hard HEAD");
 		EXPECT_FALSE(g_Git.Run(cmd, &out, CP_UTF8));
@@ -467,21 +467,21 @@ TEST_P(CBasicGitWithPartialStagingRepositoryFixture, NoNewlineAdded)
 	// This will stage a newline and unstage it back
 	for (auto& pair : std::initializer_list<std::pair<int, int>>{ {6,9}, {6,10}, {7,9}, {7,10} }) // both - and + lines, with or without one neighboring context line
 	{
-		CDiffLinesForStaging base(buf, numLines, pair.first, pair.second);
+		CDiffLinesForStaging base(buf.get(), numLines, pair.first, pair.second);
 		StagingOperations op(&base);
 		auto tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::StageLines);
-		CDiffLinesForStaging temp(tempbuf, 11, 0, 0); // the temporary patch should have 11 lines, 0 and 0 don't matter here
+		CDiffLinesForStaging temp(tempbuf.get(), 11, 0, 0); // the temporary patch should have 11 lines, 0 and 0 don't matter here
 		ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 11); // full patch
 
 		CString cmd, out;
-		EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf)), &out));
+		EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf.get())), &out));
 		EXPECT_STREQ(out, L"");
 
 		tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::UnstageLines);
-		temp = CDiffLinesForStaging(tempbuf, 11, 0, 0); // the temporary patch should have 11 lines, 0 and 0 don't matter here
+		temp = CDiffLinesForStaging(tempbuf.get(), 11, 0, 0); // the temporary patch should have 11 lines, 0 and 0 don't matter here
 		ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 11); // full patch
 
-		EXPECT_FALSE(g_Git.ApplyPatchToIndexReverse(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf)), &out));
+		EXPECT_FALSE(g_Git.ApplyPatchToIndexReverse(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf.get())), &out));
 		EXPECT_STREQ(out, L"");
 
 		cmd.Format(L"git.exe reset --hard HEAD");
@@ -497,33 +497,33 @@ TEST_P(CBasicGitWithPartialStagingRepositoryFixture, NoNewlineLastLineModified)
 	for (int i = 7; i <= 7; i++) // - line alone or with \ No newline
 		for (int j = i; j <= 8; j++)
 		{
-			CDiffLinesForStaging base(buf, numLines, i, j);
+			CDiffLinesForStaging base(buf.get(), numLines, i, j);
 			StagingOperations op(&base);
 			auto tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::StageLines);
-			CDiffLinesForStaging temp(tempbuf, 10, 0, 0); // the temporary patch should have 10 lines, 0 and 0 don't matter here
+			CDiffLinesForStaging temp(tempbuf.get(), 10, 0, 0); // the temporary patch should have 10 lines, 0 and 0 don't matter here
 			ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 4); // first 4 lines (file header)
 			ExpectPositionLineCountsChanged(base, temp, 4, 4, 3, 2); // @@ -1,3 +1,3 @@  ->  @@ -1,3 +1,2 @@
 			ExpectLineRangeIncludedAsIs(base, temp, 5, 5, 4);
 			ExpectLineIncludedAsIs(base, temp, { {11, 9} });
 
 			CString cmd, out;
-			EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf)), &out));
+			EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf.get())), &out));
 			EXPECT_STREQ(out, L"");
 			cmd.Format(L"git.exe reset --hard HEAD");
 			EXPECT_FALSE(g_Git.Run(cmd, &out, CP_UTF8));
 		}
 
 	// \ No newline alone
-	TestLineStagingNullptr(buf, numLines, 8, 8);
-	TestLineStagingNullptr(buf, numLines, 10, 10);
+	TestLineStagingNullptr(buf.get(), numLines, 8, 8);
+	TestLineStagingNullptr(buf.get(), numLines, 10, 10);
 
 	// This will stage a "34" without newline being concatenated onto the old "3" without newline  (3 no newline -> 334 no newline)
 	for (auto& pair : std::initializer_list<std::pair<int, int>>{ {8,10}, {8,11}, {9,10}, {9,11} }) // + line with its \ No newline and with/without other \ No newline and last (empty) line
 	{
-		CDiffLinesForStaging base(buf, numLines, pair.first, pair.second);
+		CDiffLinesForStaging base(buf.get(), numLines, pair.first, pair.second);
 		StagingOperations op(&base);
 		auto tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::StageLines);
-		CDiffLinesForStaging temp(tempbuf, 12, 0, 0); // the temporary patch should have 12 lines, 0 and 0 don't matter here
+		CDiffLinesForStaging temp(tempbuf.get(), 12, 0, 0); // the temporary patch should have 12 lines, 0 and 0 don't matter here
 		ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 4); // first 4 lines (file header)
 		ExpectPositionLineCountsChanged(base, temp, 4, 4, 3, 4); // @@ -1,3 +1,3 @@  ->  @@ -1,3 +1,4 @@
 		ExpectLineRangeIncludedAsIs(base, temp, 5, 5, 2);
@@ -531,7 +531,7 @@ TEST_P(CBasicGitWithPartialStagingRepositoryFixture, NoNewlineLastLineModified)
 		ExpectLineRangeIncludedAsIs(base, temp, 8, 8, 4);
 
 		CString cmd, out;
-		EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf)), &out));
+		EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf.get())), &out));
 		EXPECT_STREQ(out, L"");
 		cmd.Format(L"git.exe reset --hard HEAD");
 		EXPECT_FALSE(g_Git.Run(cmd, &out, CP_UTF8));
@@ -540,10 +540,10 @@ TEST_P(CBasicGitWithPartialStagingRepositoryFixture, NoNewlineLastLineModified)
 	// This will stage a "34" with newline being concatenated onto the old "3" without newline  (3 no newline -> 334 newline)
 	for (auto& pair : std::initializer_list<std::pair<int, int>>{ {8,9}, {9,9} }) // + line without its \ No newline and with/without other \ No newline
 	{
-		CDiffLinesForStaging base(buf, numLines, pair.first, pair.second);
+		CDiffLinesForStaging base(buf.get(), numLines, pair.first, pair.second);
 		StagingOperations op(&base);
 		auto tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::StageLines);
-		CDiffLinesForStaging temp(tempbuf, 11, 0, 0); // the temporary patch should have 11 lines, 0 and 0 don't matter here
+		CDiffLinesForStaging temp(tempbuf.get(), 11, 0, 0); // the temporary patch should have 11 lines, 0 and 0 don't matter here
 		ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 4); // first 4 lines (file header)
 		ExpectPositionLineCountsChanged(base, temp, 4, 4, 3, 4); // @@ -1,3 +1,3 @@  ->  @@ -1,3 +1,4 @@
 		ExpectLineRangeIncludedAsIs(base, temp, 5, 5, 2);
@@ -552,7 +552,7 @@ TEST_P(CBasicGitWithPartialStagingRepositoryFixture, NoNewlineLastLineModified)
 		ExpectLineIncludedAsIs(base, temp, { {11, 10} });
 
 		CString cmd, out;
-		EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf)), &out));
+		EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf.get())), &out));
 		EXPECT_STREQ(out, L"");
 		cmd.Format(L"git.exe reset --hard HEAD");
 		EXPECT_FALSE(g_Git.Run(cmd, &out, CP_UTF8));
@@ -561,21 +561,21 @@ TEST_P(CBasicGitWithPartialStagingRepositoryFixture, NoNewlineLastLineModified)
 	// This will stage a modification in the last line and unstage it back
 	for (auto& pair : std::initializer_list<std::pair<int, int>>{ {6,10}, {6,11}, {7,10}, {7,11} }) // both - and + lines, with or without one neighboring context line
 	{
-		CDiffLinesForStaging base(buf, numLines, pair.first, pair.second);
+		CDiffLinesForStaging base(buf.get(), numLines, pair.first, pair.second);
 		StagingOperations op(&base);
 		auto tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::StageLines);
-		CDiffLinesForStaging temp(tempbuf, 12, 0, 0); // the temporary patch should have 12 lines, 0 and 0 don't matter here
+		CDiffLinesForStaging temp(tempbuf.get(), 12, 0, 0); // the temporary patch should have 12 lines, 0 and 0 don't matter here
 		ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 12); // full patch
 
 		CString cmd, out;
-		EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf)), &out));
+		EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf.get())), &out));
 		EXPECT_STREQ(out, L"");
 
 		tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::UnstageLines);
-		temp = CDiffLinesForStaging(tempbuf, 12, 0, 0); // the temporary patch should have 11 lines, 0 and 0 don't matter here
+		temp = CDiffLinesForStaging(tempbuf.get(), 12, 0, 0); // the temporary patch should have 11 lines, 0 and 0 don't matter here
 		ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 12); // full patch
 
-		EXPECT_FALSE(g_Git.ApplyPatchToIndexReverse(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf)), &out));
+		EXPECT_FALSE(g_Git.ApplyPatchToIndexReverse(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf.get())), &out));
 		EXPECT_STREQ(out, L"");
 
 		cmd.Format(L"git.exe reset --hard HEAD");
@@ -590,21 +590,21 @@ TEST_P(CBasicGitWithPartialStagingRepositoryFixture, NoNewlineOtherLineModified)
 		auto buf = ReadResourcePatchToBuffer(L"\\patches\\newline-at-end-of-file-other-line-modified.patch");
 		const int numLines = 11;
 
-		CDiffLinesForStaging base(buf, numLines, 6, 6);
+		CDiffLinesForStaging base(buf.get(), numLines, 6, 6);
 		StagingOperations op(&base);
 		auto tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::StageLines);
-		CDiffLinesForStaging temp(tempbuf, 10, 0, 0); // the temporary patch should have 10 lines, 0 and 0 don't matter here
+		CDiffLinesForStaging temp(tempbuf.get(), 10, 0, 0); // the temporary patch should have 10 lines, 0 and 0 don't matter here
 		ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 4); // first 4 lines (file header)
 		ExpectPositionLineCountsChanged(base, temp, 4, 4, 3, 2); // @@ -1,3 +1,3 @@  ->  @@ -1,3 +1,2 @@
 		ExpectLineRangeIncludedAsIs(base, temp, 5, 5, 2);
 		ExpectLineRangeIncludedAsIs(base, temp, 8, 7, 3);
 
 		CString out;
-		EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf)), &out));
+		EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf.get())), &out));
 		EXPECT_STREQ(out, L"");
 
 		// \ No newline alone
-		TestLineStagingNullptr(buf, numLines, 9, 9);
+		TestLineStagingNullptr(buf.get(), numLines, 9, 9);
 	}
 	
 	// Unstage it back
@@ -612,14 +612,14 @@ TEST_P(CBasicGitWithPartialStagingRepositoryFixture, NoNewlineOtherLineModified)
 		auto buf = ReadResourcePatchToBuffer(L"\\patches\\newline-at-end-of-file-other-line-modified2.patch");
 		const int numLines = 10;
 
-		CDiffLinesForStaging base(buf, numLines, 6, 6);
+		CDiffLinesForStaging base(buf.get(), numLines, 6, 6);
 		StagingOperations op(&base);
 		auto tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::UnstageLines);
-		CDiffLinesForStaging temp(tempbuf, 10, 0, 0); // the temporary patch should have 10 lines, 0 and 0 don't matter here
+		CDiffLinesForStaging temp(tempbuf.get(), 10, 0, 0); // the temporary patch should have 10 lines, 0 and 0 don't matter here
 		ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 10); // entire patch
 
 		CString out;
-		EXPECT_FALSE(g_Git.ApplyPatchToIndexReverse(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf)), &out));
+		EXPECT_FALSE(g_Git.ApplyPatchToIndexReverse(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf.get())), &out));
 		EXPECT_STREQ(out, L"");
 	}
 
@@ -630,10 +630,10 @@ TEST_P(CBasicGitWithPartialStagingRepositoryFixture, NoNewlineOtherLineModified)
 
 		for (int i = 7; i <= 10; i++)
 		{
-			CDiffLinesForStaging base(buf, numLines, 7, i);
+			CDiffLinesForStaging base(buf.get(), numLines, 7, i);
 			StagingOperations op(&base);
 			auto tempbuf = op.CreatePatchBufferToStageOrUnstageSelectedLines(StagingType::StageLines);
-			CDiffLinesForStaging temp(tempbuf, 11, 0, 0); // the temporary patch should have 11 lines, 0 and 0 don't matter here
+			CDiffLinesForStaging temp(tempbuf.get(), 11, 0, 0); // the temporary patch should have 11 lines, 0 and 0 don't matter here
 			ExpectLineRangeIncludedAsIs(base, temp, 0, 0, 4); // first 4 lines (file header)
 			ExpectPositionLineCountsChanged(base, temp, 4, 4, 3, 4); // @@ -1,3 +1,3 @@  ->  @@ -1,3 +1,4 @@
 			ExpectLineIncludedAsIs(base, temp, { {5, 5} });
@@ -641,11 +641,11 @@ TEST_P(CBasicGitWithPartialStagingRepositoryFixture, NoNewlineOtherLineModified)
 			ExpectLineRangeIncludedAsIs(base, temp, 7, 7, 4);
 
 			CString out;
-			EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf)), &out));
+			EXPECT_FALSE(g_Git.ApplyPatchToIndex(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf.get())), &out));
 			EXPECT_STREQ(out, L"");
 
 			// Unstage it back
-			EXPECT_FALSE(g_Git.ApplyPatchToIndexReverse(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf)), &out));
+			EXPECT_FALSE(g_Git.ApplyPatchToIndexReverse(static_cast<LPCWSTR>(StagingOperations::WritePatchBufferToTemporaryFile(tempbuf.get())), &out));
 			EXPECT_STREQ(out, L"");
 		}
 	}

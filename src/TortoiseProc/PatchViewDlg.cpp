@@ -463,7 +463,7 @@ void CPatchViewDlg::StageOrUnstageSelectedLinesOrHunks(StagingType stagingType)
 
 	int lineCount = static_cast<int>(m_ctrlPatchView.Call(SCI_GETLINECOUNT));
 
-	CDiffLinesForStaging lines(wholePatchBuf, lineCount, GetFirstLineNumberSelected(), GetLastLineNumberSelected());
+	CDiffLinesForStaging lines(wholePatchBuf.get(), lineCount, GetFirstLineNumberSelected(), GetLastLineNumberSelected());
 	auto op = StagingOperations(&lines);
 	std::unique_ptr<char[]> strPatch;
 	if (stagingType == StagingType::StageLines || stagingType == StagingType::UnstageLines)
@@ -489,7 +489,7 @@ void CPatchViewDlg::StageOrUnstageSelectedLinesOrHunks(StagingType stagingType)
 	else // if the patch to be applied is different than the whole diff, the file is still partially staged or became partially staged
 		newStatus = CTGitPath::StagingStatus::PartiallyStaged;
 
-	CString tempPatch = StagingOperations::WritePatchBufferToTemporaryFile(strPatch);
+	CString tempPatch = StagingOperations::WritePatchBufferToTemporaryFile(strPatch.get());
 	if (tempPatch.IsEmpty())
 		return;
 

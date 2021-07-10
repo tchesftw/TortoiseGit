@@ -1,6 +1,6 @@
 ﻿// TortoiseGit - a Windows shell extension for easy version control
 
-// Copyright (C) 2016, 2019-2020 - TortoiseGit
+// Copyright (C) 2016, 2019-2021 - TortoiseGit
 // Copyright (C) 2007, 2009-2013, 2020 - TortoiseSVN
 
 // This program is free software; you can redistribute it and/or
@@ -38,7 +38,7 @@ public:
 	}
 	std::unique_ptr<char[]> CreatePatchBufferToStageOrUnstageSelectedHunks() const;
 	std::unique_ptr<char[]> CreatePatchBufferToStageOrUnstageSelectedLines(StagingType stagingType) const;
-	static CString WritePatchBufferToTemporaryFile(const std::unique_ptr<char[]>& data);
+	static CString WritePatchBufferToTemporaryFile(const char* data);
 
 private:
 	const CDiffLinesForStaging* m_lines;
@@ -51,10 +51,10 @@ private:
 #ifdef GTEST_INCLUDE_GTEST_GTEST_H_
 public:
 #endif
-	std::unique_ptr<char[]> ChangeOldAndNewLinesCount(const std::unique_ptr<char[]>& strHunkStart, int oldCount, int newCount) const;
+	std::unique_ptr<char[]> ChangeOldAndNewLinesCount(const char* strHunkStart, int oldCount, int newCount) const;
 
 private:
-	bool ParseHunkOnEitherSelectionBoundary(std::unique_ptr<char[]>& hunkWithoutStartLine, int hunkWithoutStartLineLen,
+	bool ParseHunkOnEitherSelectionBoundary(char* hunkWithoutStartLine, int hunkWithoutStartLineLen,
 											int hunkStartLine, int hunkLastLine,
 											int firstLineSelected, int lastLineSelected,
 											int* oldCount, int* newCount, StagingType stagingType) const;

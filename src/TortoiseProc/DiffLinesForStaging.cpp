@@ -1,6 +1,6 @@
 ﻿// TortoiseGit - a Windows shell extension for easy version control
 
-// Copyright (C) 2016, 2019-2020 - TortoiseGit
+// Copyright (C) 2016, 2019-2021 - TortoiseGit
 // Copyright (C) 2007, 2009-2013, 2020 - TortoiseSVN
 
 // This program is free software; you can redistribute it and/or
@@ -21,9 +21,9 @@
 #include "DiffLinesForStaging.h"
 #include <regex>
 
-CDiffLinesForStaging::CDiffLinesForStaging(const std::unique_ptr<char[]>& text, int numLines, int firstLineSelected, int lastLineSelected)
+CDiffLinesForStaging::CDiffLinesForStaging(const char* text, int numLines, int firstLineSelected, int lastLineSelected)
 {
-	const char* ptr = text.get();
+	const char* ptr = text;
 	int last_i = 0; // beginning of the last line processed
 	int state = 0;
 	int oldCount = 0, newCount = 0;
@@ -48,7 +48,7 @@ CDiffLinesForStaging::CDiffLinesForStaging(const std::unique_ptr<char[]>& text, 
 
 		int linebuflen = i - last_i + eol_len + 1;
 		auto line = std::make_unique<char[]>(linebuflen);
-		strncpy_s(line.get(), linebuflen, text.get() + last_i, linebuflen - 1);
+		strncpy_s(line.get(), linebuflen, text + last_i, linebuflen - 1);
 		last_i = i + eol_len;
 		i += eol_len;
 
@@ -86,7 +86,7 @@ CDiffLinesForStaging::CDiffLinesForStaging(const std::unique_ptr<char[]>& text, 
 			case 3:
 				if (strncmp(line.get(), "@@ ", 3) == 0)
 				{
-					if (GetOldAndNewLinesCountFromHunk(line, &oldCount, &newCount, true))
+					if (GetOldAndNewLinesCountFromHunk(line.get(), &oldCount, &newCount, true))
 					{
 						type = DiffLineTypes::POSITION;
 						fileWasAdded = oldCount == 0;
@@ -222,14 +222,14 @@ int CDiffLinesForStaging::GetDocumentLength() const
 // Parses it to extract its old lines count and new lines count and passes them back to the given oldCount and newCount.
 // Returns true if the line matches the expected format, false otherwise (what should never happen).
 // If allowSingleLine is false, returns false for hunks missing the start line number in one or both sides (e.g. @@ -x +y,z @@)
-bool CDiffLinesForStaging::GetOldAndNewLinesCountFromHunk(const std::unique_ptr<char[]>& strHunkStart,
+bool CDiffLinesForStaging::GetOldAndNewLinesCountFromHunk(const char* strHunkStart,
 														  int* oldCount, int* newCount, bool allowSingleLine)
 {
 	std::string pattern = allowSingleLine ? "^@@ -(?:\\d+?,)?(\\d+?) \\+(?:\\d+?,)?(\\d+?) @@" : "^@@ -\\d+?,(\\d+?) \\+\\d+?,(\\d+?) @@";
 	std::regex rx(pattern, std::regex_constants::ECMAScript);
 	std::smatch match;
 
-	std::string rmatch = std::string(static_cast<LPCSTR>(strHunkStart.get()));
+	std::string rmatch = std::string(static_cast<LPCSTR>(strHunkStart));
 	if ((!std::regex_search(rmatch, match, rx)) || match.size() != 3) // this should never happen
 		return false;
 	*oldCount = StrToIntA(match[1].str().c_str());

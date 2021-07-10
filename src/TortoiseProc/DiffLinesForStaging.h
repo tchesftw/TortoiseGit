@@ -1,6 +1,6 @@
 ﻿// TortoiseGit - a Windows shell extension for easy version control
 
-// Copyright (C) 2016, 2019-2020 - TortoiseGit
+// Copyright (C) 2016, 2019-2021 - TortoiseGit
 // Copyright (C) 2007, 2009-2013, 2020 - TortoiseSVN
 
 // This program is free software; you can redistribute it and/or
@@ -62,7 +62,7 @@ private:
 	int m_lastLineSelected;
 
 public:
-	CDiffLinesForStaging(const std::unique_ptr<char[]>& text, int numLines, int firstLineSelected, int lastLineSelected);
+	CDiffLinesForStaging(const char* text, int numLines, int firstLineSelected, int lastLineSelected);
 
 	int GetFirstLineNumberSelected() const;
 	int GetLastLineNumberSelected() const;
@@ -74,7 +74,7 @@ public:
 	bool IsNoNewlineComment(int line) const;
 	int GetDocumentLength() const;
 
-	static bool GetOldAndNewLinesCountFromHunk(const std::unique_ptr<char[]>& strHunkStart, int* oldCount, int* newCount, bool allowSingleLine = false);
+	static bool GetOldAndNewLinesCountFromHunk(const char* strHunkStart, int* oldCount, int* newCount, bool allowSingleLine = false);
 
 #ifdef GTEST_INCLUDE_GTEST_GTEST_H_
 public:
